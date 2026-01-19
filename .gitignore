@@ -56,3 +56,4 @@ prisma/migrations/**/migration_lock.toml
 supabase/.branches
 supabase/.temp
 .vercel
+.env*.local
