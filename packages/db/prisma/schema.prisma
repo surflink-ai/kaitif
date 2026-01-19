@@ -1,0 +1,573 @@
+// Kaitif Skatepark Database Schema
+// Simplified: 18 models, no Circuit feature
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+enum UserRole {
+  USER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  avatarUrl     String?
+  bio           String?
+  role          UserRole @default(USER)
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  streak        Int      @default(0)
+  stripeAccountId String?
+  lastVisitDate DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  passes               Pass[]
+  waivers              Waiver[]
+  eventRsvps           EventRSVP[]
+  eventAttendances     EventAttendance[]
+  challengeCompletions ChallengeCompletion[]
+  badges               UserBadge[]
+  listings             Listing[]
+  purchasedTransactions Transaction[] @relation("BuyerTransactions")
+  soldTransactions      Transaction[] @relation("SellerTransactions")
+  reviewsGiven         Review[]       @relation("ReviewsGiven")
+  reviewsReceived      Review[]       @relation("ReviewsReceived")
+  conversationMembers  ConversationMember[]
+  messages             Message[]
+  eventSuggestions     EventSuggestion[]
+  suggestionVotes      EventSuggestionVote[]
+  uploadedMedia        EventMedia[]
+  pushSubscriptions    PushSubscription[]
+
+  @@map("users")
+}
+
+enum PassType {
+  DAY
+  WEEK
+  MONTH
+  ANNUAL
+}
+
+enum PassStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+model Pass {
+  id              String     @id @default(uuid())
+  userId          String
+  type            PassType
+  status          PassStatus @default(ACTIVE)
+  barcodeId       String     @unique
+  stripePaymentId String?
+  purchasedAt     DateTime   @default(now())
+  expiresAt       DateTime
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scans PassScan[]
+
+  @@index([userId])
+  @@index([barcodeId])
+  @@index([status])
+  @@map("passes")
+}
+
+model PassScan {
+  id        String   @id @default(uuid())
+  passId    String
+  scannedAt DateTime @default(now())
+  scannedBy String?  // Staff member who scanned
+  location  String?  // Entry point
+
+  // Relations
+  pass Pass @relation(fields: [passId], references: [id], onDelete: Cascade)
+
+  @@index([passId])
+  @@map("pass_scans")
+}
+
+// ============================================
+// WAIVERS
+// ============================================
+
+model WaiverVersion {
+  id        String   @id @default(uuid())
+  version   Int      @unique
+  content   String   // Legal text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relations
+  waivers Waiver[]
+
+  @@map("waiver_versions")
+}
+
+model Waiver {
+  id                String   @id @default(uuid())
+  userId            String
+  waiverVersionId   String
+  signature         String   // Base64 encoded signature image
+  guardianName      String?  // For minors
+  guardianSignature String?  // For minors
+  signedAt          DateTime @default(now())
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  waiverVersion WaiverVersion @relation(fields: [waiverVersionId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("waivers")
+}
+
+// ============================================
+// EVENTS
+// ============================================
+
+enum EventCategory {
+  COMPETITION
+  WORKSHOP
+  OPEN_SESSION
+  PRIVATE_RENTAL
+  COMMUNITY
+  SPECIAL
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  category    EventCategory
+  imageUrl    String?
+  startTime   DateTime
+  endTime     DateTime
+  capacity    Int?
+  xpReward    Int           @default(25)
+  hypeLevel   Int           @default(0) // 0-100
+  isPublished Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  rsvps       EventRSVP[]
+  attendances EventAttendance[]
+  media       EventMedia[]
+
+  @@index([startTime])
+  @@index([category])
+  @@map("events")
+}
+
+enum RSVPStatus {
+  GOING
+  MAYBE
+  WAITLIST
+  CANCELLED
+}
+
+model EventRSVP {
+  id          String     @id @default(uuid())
+  userId      String
+  eventId     String
+  status      RSVPStatus @default(GOING)
+  friendCount Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@map("event_rsvps")
+}
+
+model EventAttendance {
+  id         String   @id @default(uuid())
+  userId     String
+  eventId    String
+  checkedIn  DateTime @default(now())
+  xpAwarded  Int      @default(0)
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@map("event_attendances")
+}
+
+model EventMedia {
+  id         String   @id @default(uuid())
+  eventId    String
+  uploaderId String
+  url        String
+  type       String   // image or video
+  caption    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  event    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_media")
+}
+
+model EventSuggestion {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  category    EventCategory
+  voteCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes EventSuggestionVote[]
+
+  @@index([voteCount])
+  @@map("event_suggestions")
+}
+
+model EventSuggestionVote {
+  id           String   @id @default(uuid())
+  userId       String
+  suggestionId String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  suggestion EventSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, suggestionId])
+  @@map("event_suggestion_votes")
+}
+
+// ============================================
+// GAMIFICATION
+// ============================================
+
+enum ChallengeDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model Challenge {
+  id            String              @id @default(uuid())
+  title         String
+  description   String
+  difficulty    ChallengeDifficulty
+  xpReward      Int
+  videoRequired Boolean             @default(true)
+  imageUrl      String?
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  completions ChallengeCompletion[]
+
+  @@index([difficulty])
+  @@map("challenges")
+}
+
+enum CompletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ChallengeCompletion {
+  id          String           @id @default(uuid())
+  userId      String
+  challengeId String
+  videoUrl    String?
+  status      CompletionStatus @default(PENDING)
+  xpAwarded   Int              @default(0)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  submittedAt DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([status])
+  @@map("challenge_completions")
+}
+
+enum BadgeRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String
+  imageUrl    String
+  rarity      BadgeRarity
+  criteria    String      // JSON criteria for auto-awarding
+  createdAt   DateTime    @default(now())
+
+  // Relations
+  userBadges UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@map("user_badges")
+}
+
+// ============================================
+// MARKETPLACE
+// ============================================
+
+enum ListingCategory {
+  SKATEBOARD
+  SCOOTER
+  BMX
+  PROTECTIVE_GEAR
+  APPAREL
+  ACCESSORIES
+  OTHER
+}
+
+enum ListingCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  RESERVED
+  REMOVED
+}
+
+model Listing {
+  id          String           @id @default(uuid())
+  sellerId    String
+  title       String
+  description String
+  price       Int              // In cents
+  category    ListingCategory
+  condition   ListingCondition
+  status      ListingStatus    @default(ACTIVE)
+  images      String[]         // Array of URLs
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  seller       User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  reports      ListingReport[]
+
+  @@index([sellerId])
+  @@index([category])
+  @@index([status])
+  @@map("listings")
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  listingId       String
+  buyerId         String
+  sellerId        String
+  amount          Int               // In cents
+  status          TransactionStatus @default(PENDING)
+  stripePaymentId String?
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+
+  // Relations
+  listing Listing @relation(fields: [listingId], references: [id])
+  buyer   User    @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  seller  User    @relation("SellerTransactions", fields: [sellerId], references: [id])
+  reviews Review[]
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@map("transactions")
+}
+
+model Review {
+  id            String   @id @default(uuid())
+  transactionId String
+  reviewerId    String
+  revieweeId    String
+  rating        Int      // 1-5
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  reviewer    User        @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee    User        @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, reviewerId])
+  @@index([revieweeId])
+  @@map("reviews")
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+enum ConversationType {
+  DM
+  GROUP
+}
+
+model Conversation {
+  id             String           @id @default(uuid())
+  type           ConversationType @default(DM)
+  name           String?          // For group chats
+  isAnnouncement Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  members  ConversationMember[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String    @id @default(uuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  joinedAt       DateTime  @default(now())
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  replyToId      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies      Message[]    @relation("MessageReplies")
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+// ============================================
+// PUSH NOTIFICATIONS
+// ============================================
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  keys      Json     // { p256dh, auth }
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ============================================
+// LISTING REPORTS (for moderation)
+// ============================================
+
+model ListingReport {
+  id        String   @id @default(uuid())
+  listingId String
+  reporterId String
+  reason    String
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime @default(now())
+
+  // Relations
+  listing  Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([status])
+  @@map("listing_reports")
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
