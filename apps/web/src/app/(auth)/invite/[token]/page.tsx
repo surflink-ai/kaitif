@@ -174,7 +174,7 @@ export default function InviteAcceptPage() {
       setTimeout(() => {
         if (invite.role === "ADMIN" || invite.role === "SUPERADMIN") {
           // Redirect to admin dashboard
-          window.location.href = process.env.NEXT_PUBLIC_ADMIN_URL || "/";
+          window.location.href = process.env.NEXT_PUBLIC_ADMIN_URL || "https://admin.kaitif.com";
         } else {
           router.push("/home");
         }
