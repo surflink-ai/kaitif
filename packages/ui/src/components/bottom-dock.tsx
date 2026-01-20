@@ -15,11 +15,13 @@ const BottomDock = React.forwardRef<HTMLDivElement, BottomDockProps>(
         className={cn(
           // Positioning
           "fixed bottom-0 left-0 right-0 z-50",
-          // Background with backdrop blur for modern iOS feel
-          "bg-[#080808]/90 backdrop-blur-lg",
+          // Solid background
+          "bg-[#080808]",
           "border-t border-[#F5F5F0]/10",
           // Safe area padding for home indicator
           "pb-[env(safe-area-inset-bottom)]",
+          // Extend background below for safe area coverage
+          "before:absolute before:inset-x-0 before:top-full before:h-[env(safe-area-inset-bottom)] before:bg-[#080808]",
           // Hide on desktop
           "md:hidden",
           className
