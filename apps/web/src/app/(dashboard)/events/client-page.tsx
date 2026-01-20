@@ -317,10 +317,10 @@ export default function EventsClientPage({
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tight mb-2">
-            <span className="text-[#FFCC00]">Events</span>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2 text-white">
+            <span className="text-[#FFE500]">Events</span>
           </h1>
-          <p className="text-[#F5F5F0]/60">
+          <p className="text-white/60">
             Discover upcoming events, competitions, and workshops.
           </p>
         </div>
@@ -471,17 +471,17 @@ export default function EventsClientPage({
               const isLive = now >= start && now <= end;
 
               return (
-                <Card key={event.id} className="hover:border-[#FFCC00]/30 transition-colors overflow-hidden">
+                <Card key={event.id} className="hover:border-[#FFE500]/30 transition-colors overflow-hidden">
                   <CardContent className="p-0">
                     <div className="grid md:grid-cols-[1fr,auto] gap-6">
                       {/* Event Info */}
                       <div className="p-6">
                         <div className="flex items-start gap-4 mb-4">
                           <div className="text-center min-w-[60px]">
-                            <div className="text-3xl font-bold text-[#FFCC00]">
+                            <div className="text-3xl font-bold text-[#FFE500]">
                               {new Date(event.startTime).getDate()}
                             </div>
-                            <div className="text-xs text-[#F5F5F0]/40 uppercase">
+                            <div className="text-xs text-[white]/40 uppercase">
                               {new Date(event.startTime).toLocaleDateString("en-US", { month: "short" })}
                             </div>
                           </div>
@@ -494,13 +494,13 @@ export default function EventsClientPage({
                               {userRsvp && <Badge variant="outline" className="border-green-500 text-green-500">{userRsvp.status}</Badge>}
                               {isCheckedIn && <Badge variant="outline" className="border-blue-500 text-blue-500">CHECKED IN</Badge>}
                             </div>
-                            <h3 className="text-xl font-bold uppercase tracking-wider mb-2">
+                            <h3 className="text-xl font-semibold text-white mb-2">
                               {event.title}
                             </h3>
-                            <p className="text-[#F5F5F0]/60 text-sm mb-4">
+                            <p className="text-[white]/60 text-sm mb-4">
                               {event.description}
                             </p>
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-[#F5F5F0]/40">
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-[white]/40">
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4" />
                                 <span>{formatEventTime(event.startTime)} - {formatEventTime(event.endTime)}</span>
@@ -535,7 +535,7 @@ export default function EventsClientPage({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <AvatarStack users={event.rsvps?.map((r: any) => r.user) || []} max={4} size="sm" />
-                            <span className="text-sm text-[#F5F5F0]/40">
+                            <span className="text-sm text-[white]/40">
                               {rsvpCount} attending
                             </span>
                           </div>
@@ -547,7 +547,7 @@ export default function EventsClientPage({
                       <div className="bg-[#0A0A0A] p-6 flex flex-col justify-center min-w-[200px]">
                         {!isLive && (
                           <>
-                            <p className="text-xs text-[#F5F5F0]/40 uppercase tracking-wider mb-2">Starts In</p>
+                            <p className="text-xs text-[white]/40 uppercase tracking-wider mb-2">Starts In</p>
                             <CountdownTimer targetDate={event.startTime} size="sm" showDays={true} />
                           </>
                         )}
@@ -597,9 +597,9 @@ export default function EventsClientPage({
             {filteredEvents.length === 0 && (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Calendar className="h-12 w-12 text-[#F5F5F0]/20 mx-auto mb-4" />
+                  <Calendar className="h-12 w-12 text-[white]/20 mx-auto mb-4" />
                   <h3 className="text-lg font-bold uppercase tracking-wider mb-2">No Events Found</h3>
-                  <p className="text-[#F5F5F0]/60">
+                  <p className="text-[white]/60">
                     There are no upcoming events in this category.
                   </p>
                 </CardContent>
@@ -625,8 +625,8 @@ export default function EventsClientPage({
                       </Button>
                     </div>
                     <h3 className="font-bold text-lg mb-2">{suggestion.title}</h3>
-                    <p className="text-sm text-[#F5F5F0]/60 mb-4">{suggestion.description}</p>
-                    <div className="text-xs text-[#F5F5F0]/40">
+                    <p className="text-sm text-[white]/60 mb-4">{suggestion.description}</p>
+                    <div className="text-xs text-[white]/40">
                       Suggested by {suggestion.user?.name || "Anonymous"}
                     </div>
                   </CardContent>
@@ -634,7 +634,7 @@ export default function EventsClientPage({
                );
             })}
              {topSuggestions.length === 0 && (
-              <div className="col-span-full text-center py-12 text-[#F5F5F0]/60">
+              <div className="col-span-full text-center py-12 text-[white]/60">
                 No suggestions yet. Be the first to suggest an event!
               </div>
             )}
@@ -648,14 +648,14 @@ export default function EventsClientPage({
                  <CardContent className="p-6 flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-lg">{event.title}</h3>
-                      <p className="text-sm text-[#F5F5F0]/60">{new Date(event.startTime).toLocaleDateString()}</p>
+                      <p className="text-sm text-[white]/60">{new Date(event.startTime).toLocaleDateString()}</p>
                     </div>
                     <Badge variant="outline">Ended</Badge>
                  </CardContent>
               </Card>
             ))}
              {pastEvents.length === 0 && (
-              <div className="text-center py-12 text-[#F5F5F0]/60">
+              <div className="text-center py-12 text-[white]/60">
                 No past events found.
               </div>
             )}

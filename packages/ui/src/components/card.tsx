@@ -3,20 +3,37 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "bg-[#080808] border-2 border-[#F5F5F0]/10 p-6",
-      "shadow-[4px_4px_0px_0px_rgba(245,245,240,0.1)]",
-      className
-    )}
-    {...props}
-  />
-));
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "glass" | "solid" | "interactive";
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant = "default", ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        // Base glass styling
+        "rounded-2xl p-6",
+        "bg-white/[0.05] backdrop-blur-xl",
+        "border border-white/[0.08]",
+        "shadow-[0_8px_32px_rgba(0,0,0,0.3)]",
+        // Inner highlight for glass depth
+        "relative before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:rounded-t-2xl",
+        // Variant styles
+        variant === "solid" && "bg-white/[0.08] backdrop-blur-2xl border-white/[0.12]",
+        variant === "interactive" && [
+          "transition-all duration-300 ease-out cursor-pointer",
+          "hover:bg-white/[0.08] hover:border-white/[0.12]",
+          "hover:shadow-[0_12px_40px_rgba(0,0,0,0.4)]",
+          "hover:-translate-y-0.5",
+          "active:translate-y-0",
+        ],
+        className
+      )}
+      {...props}
+    />
+  )
+);
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<
@@ -38,7 +55,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-xl font-bold uppercase tracking-wider text-[#F5F5F0]",
+      "text-lg font-semibold tracking-tight text-white",
       className
     )}
     {...props}
@@ -52,7 +69,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-[#F5F5F0]/60", className)}
+    className={cn("text-sm text-white/60", className)}
     {...props}
   />
 ));

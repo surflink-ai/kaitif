@@ -125,10 +125,10 @@ export default function MarketplaceClientPage({
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tight mb-2">
-            <span className="text-[#FFCC00]">Marketplace</span>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2 text-white">
+            <span className="text-[#FFE500]">Marketplace</span>
           </h1>
-          <p className="text-[#F5F5F0]/60">
+          <p className="text-white/60">
             Buy and sell gear within the community.
           </p>
         </div>
@@ -233,7 +233,7 @@ export default function MarketplaceClientPage({
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#F5F5F0]/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[white]/40" />
           <Input
             placeholder="Search listings..."
             value={searchQuery}
@@ -265,14 +265,14 @@ export default function MarketplaceClientPage({
       {/* Listings Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredListings.map((listing) => (
-          <Card key={listing.id} className="hover:border-[#FFCC00]/30 transition-colors overflow-hidden flex flex-col">
+          <Card key={listing.id} className="hover:border-[#FFE500]/30 transition-colors overflow-hidden flex flex-col">
             <CardContent className="p-0 flex flex-col h-full">
               {/* Image placeholder */}
-              <div className="aspect-square bg-gradient-to-br from-[#F5F5F0]/5 to-[#F5F5F0]/10 relative">
+              <div className="aspect-square bg-gradient-to-br from-[white]/5 to-[white]/10 relative">
                 {listing.images[0] ? (
                     <img src={listing.images[0]} alt={listing.title} className="w-full h-full object-cover" />
                 ) : (
-                    <ShoppingBag className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-16 text-[#F5F5F0]/10" />
+                    <ShoppingBag className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-16 text-[white]/10" />
                 )}
                 
                 <div className="absolute bottom-4 left-4">
@@ -285,12 +285,12 @@ export default function MarketplaceClientPage({
                   <h3 className="font-bold uppercase tracking-wider line-clamp-1 flex-1">
                     {listing.title}
                   </h3>
-                  <span className="text-xl font-bold text-[#FFCC00] ml-2">
+                  <span className="text-xl font-bold text-[#FFE500] ml-2">
                     {formatPrice(listing.price)}
                   </span>
                 </div>
 
-                <p className="text-sm text-[#F5F5F0]/60 line-clamp-2 mb-3 flex-1">
+                <p className="text-sm text-[white]/60 line-clamp-2 mb-3 flex-1">
                   {listing.description}
                 </p>
 
@@ -298,7 +298,7 @@ export default function MarketplaceClientPage({
                   <Badge variant="secondary">
                     {CONDITION_LABELS[listing.condition as Condition]}
                   </Badge>
-                  <div className="flex items-center gap-1 text-sm text-[#F5F5F0]/40">
+                  <div className="flex items-center gap-1 text-sm text-[white]/40">
                     <span>{listing.seller?.name || "Unknown"}</span>
                   </div>
                 </div>
@@ -320,9 +320,9 @@ export default function MarketplaceClientPage({
       {filteredListings.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <ShoppingBag className="h-12 w-12 text-[#F5F5F0]/20 mx-auto mb-4" />
+            <ShoppingBag className="h-12 w-12 text-[white]/20 mx-auto mb-4" />
             <h3 className="text-lg font-bold uppercase tracking-wider mb-2">No Listings Found</h3>
-            <p className="text-[#F5F5F0]/60 mb-4">
+            <p className="text-[white]/60 mb-4">
               {searchQuery ? "Try adjusting your search or filters." : "Be the first to list something!"}
             </p>
           </CardContent>

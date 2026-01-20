@@ -13,7 +13,11 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-12 items-center gap-1 bg-[#080808] p-1 border-2 border-[#F5F5F0]/10",
+      // Glass container
+      "inline-flex h-12 items-center gap-1 p-1",
+      "bg-white/[0.05] backdrop-blur-lg",
+      "border border-white/[0.08]",
+      "rounded-2xl",
       className
     )}
     {...props}
@@ -28,13 +32,21 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
+      // Base
       "inline-flex items-center justify-center whitespace-nowrap px-4 py-2",
-      "text-sm font-bold uppercase tracking-wider text-[#F5F5F0]/60",
-      "transition-all",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808]",
+      "text-sm font-medium text-white/60",
+      "rounded-xl",
+      // Transitions
+      "transition-all duration-200",
+      // Focus
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFE500]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F]",
+      // Disabled
       "disabled:pointer-events-none disabled:opacity-50",
-      "data-[state=active]:bg-[#FFCC00] data-[state=active]:text-[#080808]",
-      "hover:text-[#F5F5F0]",
+      // Hover (inactive)
+      "hover:text-white/80 hover:bg-white/[0.05]",
+      // Active state
+      "data-[state=active]:bg-[#FFE500] data-[state=active]:text-[#0A0A0F]",
+      "data-[state=active]:shadow-[0_0_16px_rgba(255,229,0,0.3)]",
       className
     )}
     {...props}
@@ -50,7 +62,9 @@ const TabsContent = React.forwardRef<
     ref={ref}
     className={cn(
       "mt-4",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCC00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#080808]",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFE500]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0F]",
+      // Animation
+      "data-[state=active]:animate-fade-in",
       className
     )}
     {...props}

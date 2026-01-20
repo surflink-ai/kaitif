@@ -114,10 +114,10 @@ export default function ChallengesClientPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tight mb-2">
-          <span className="text-[#FFCC00]">Challenges</span>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2 text-white">
+          <span className="text-[#FFE500]">Challenges</span>
         </h1>
-        <p className="text-[#F5F5F0]/60">
+        <p className="text-white/60">
           Complete trick challenges to earn XP and unlock badges.
         </p>
       </div>
@@ -130,7 +130,7 @@ export default function ChallengesClientPage({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="video">Video Evidence</Label>
-              <div className="border-2 border-dashed border-[#F5F5F0]/20 rounded-lg p-8 text-center hover:border-[#FFCC00]/50 transition-colors cursor-pointer relative">
+              <div className="border-2 border-dashed border-[white]/20 rounded-lg p-8 text-center hover:border-[#FFE500]/50 transition-colors cursor-pointer relative">
                 <input 
                   type="file" 
                   id="video" 
@@ -140,11 +140,11 @@ export default function ChallengesClientPage({
                   required
                 />
                 <div className="flex flex-col items-center gap-2">
-                  <Upload className="h-8 w-8 text-[#F5F5F0]/40" />
+                  <Upload className="h-8 w-8 text-[white]/40" />
                   <p className="text-sm font-medium">
                     {file ? file.name : "Click to upload video"}
                   </p>
-                  <p className="text-xs text-[#F5F5F0]/40">MP4, MOV up to 50MB</p>
+                  <p className="text-xs text-[white]/40">MP4, MOV up to 50MB</p>
                 </div>
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function ChallengesClientPage({
               return (
                 <Card 
                   key={challenge.id} 
-                  className={`transition-colors ${isCompleted ? "border-green-500/50" : "hover:border-[#FFCC00]/30"}`}
+                  className={`transition-colors ${isCompleted ? "border-green-500/50" : "hover:border-[#FFE500]/30"}`}
                 >
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between mb-4">
@@ -226,23 +226,23 @@ export default function ChallengesClientPage({
                     <h3 className="text-xl font-bold uppercase tracking-wider mb-2">
                       {challenge.title}
                     </h3>
-                    <p className="text-sm text-[#F5F5F0]/60 mb-4">
+                    <p className="text-sm text-[white]/60 mb-4">
                       {challenge.description}
                     </p>
 
                     <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-1 text-[#FFCC00]">
+                      <div className="flex items-center gap-1 text-[#FFE500]">
                         <Zap className="h-5 w-5" />
                         <span className="font-bold">+{challenge.xpReward} XP</span>
                       </div>
-                      <div className="flex items-center gap-1 text-[#F5F5F0]/40 text-sm">
+                      <div className="flex items-center gap-1 text-[white]/40 text-sm">
                         <Trophy className="h-4 w-4" />
                         <span>{challenge.completions?.[0]?.count || 0} completed</span>
                       </div>
                     </div>
 
                     {challenge.videoRequired && (
-                      <div className="flex items-center gap-2 text-xs text-[#F5F5F0]/40 mb-4">
+                      <div className="flex items-center gap-2 text-xs text-[white]/40 mb-4">
                         <Video className="h-4 w-4" />
                         <span>Video submission required</span>
                       </div>
@@ -278,15 +278,15 @@ export default function ChallengesClientPage({
                 return (
                   <div
                     key={entry.id}
-                    className={`flex items-center gap-4 p-4 border-b border-[#F5F5F0]/10 last:border-0 ${
-                      isCurrentUser ? "bg-[#FFCC00]/10" : ""
+                    className={`flex items-center gap-4 p-4 border-b border-[white]/10 last:border-0 ${
+                      isCurrentUser ? "bg-[#FFE500]/10" : ""
                     }`}
                   >
                     <div className={`w-10 text-center font-bold ${
-                      rank === 1 ? "text-[#FFCC00]" :
+                      rank === 1 ? "text-[#FFE500]" :
                       rank === 2 ? "text-gray-400" :
                       rank === 3 ? "text-orange-500" :
-                      "text-[#F5F5F0]/40"
+                      "text-[white]/40"
                     }`}>
                       {rank <= 3 ? (
                         <Medal className="h-6 w-6 mx-auto" />
@@ -296,19 +296,19 @@ export default function ChallengesClientPage({
                     </div>
                     <Avatar name={entry.name} src={entry.avatarUrl} size="md" />
                     <div className="flex-1">
-                      <p className={`font-bold ${isCurrentUser ? "text-[#FFCC00]" : ""}`}>
+                      <p className={`font-bold ${isCurrentUser ? "text-[#FFE500]" : ""}`}>
                         {entry.name || "Anonymous Skater"}
                       </p>
-                      <p className="text-sm text-[#F5F5F0]/40">
+                      <p className="text-sm text-[white]/40">
                         Level {entry.level}
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="flex items-center gap-1 text-[#FFCC00] font-bold">
+                      <div className="flex items-center gap-1 text-[#FFE500] font-bold">
                         <Zap className="h-4 w-4" />
                         {entry.xp.toLocaleString()}
                       </div>
-                      <p className="text-xs text-[#F5F5F0]/40">XP</p>
+                      <p className="text-xs text-[white]/40">XP</p>
                     </div>
                   </div>
                 );
@@ -331,13 +331,13 @@ export default function ChallengesClientPage({
                       badge.rarity === "COMMON" ? "bg-gray-500/20 border-2 border-gray-500" :
                       badge.rarity === "RARE" ? "bg-blue-500/20 border-2 border-blue-500" :
                       badge.rarity === "EPIC" ? "bg-purple-500/20 border-2 border-purple-500" :
-                      "bg-[#FFCC00]/20 border-2 border-[#FFCC00]"
+                      "bg-[#FFE500]/20 border-2 border-[#FFE500]"
                     }`}>
                       <Trophy className={`h-8 w-8 ${
                         badge.rarity === "COMMON" ? "text-gray-500" :
                         badge.rarity === "RARE" ? "text-blue-500" :
                         badge.rarity === "EPIC" ? "text-purple-500" :
-                        "text-[#FFCC00]"
+                        "text-[#FFE500]"
                       }`} />
                     </div>
                     <Badge variant={
@@ -349,14 +349,14 @@ export default function ChallengesClientPage({
                       {badge.rarity}
                     </Badge>
                     <h4 className="font-bold uppercase tracking-wider mb-1">{badge.name}</h4>
-                    <p className="text-xs text-[#F5F5F0]/40">{badge.description}</p>
-                    <p className="text-[10px] text-[#F5F5F0]/30 mt-2">Earned {new Date(userBadge.earnedAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-[white]/40">{badge.description}</p>
+                    <p className="text-[10px] text-[white]/30 mt-2">Earned {new Date(userBadge.earnedAt).toLocaleDateString()}</p>
                   </CardContent>
                 </Card>
               );
             })}
              {userBadges.length === 0 && (
-              <div className="col-span-full text-center py-12 text-[#F5F5F0]/60">
+              <div className="col-span-full text-center py-12 text-[white]/60">
                 No badges earned yet. Complete challenges to earn them!
               </div>
             )}

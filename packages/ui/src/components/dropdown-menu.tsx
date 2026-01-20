@@ -26,7 +26,10 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center px-2 py-1.5 text-sm outline-none focus:bg-[#FFCC00] focus:text-[#080808] data-[state=open]:bg-[#FFCC00] data-[state=open]:text-[#080808]",
+      "flex cursor-default select-none items-center px-3 py-2 text-sm rounded-lg outline-none",
+      "transition-colors duration-150",
+      "focus:bg-[#FFE500] focus:text-[#0A0A0F]",
+      "data-[state=open]:bg-[#FFE500] data-[state=open]:text-[#0A0A0F]",
       inset && "pl-8",
       className
     )}
@@ -46,7 +49,18 @@ const DropdownMenuSubContent = React.forwardRef<
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      "z-50 min-w-[8rem] overflow-hidden bg-[#080808] border-2 border-[#F5F5F0]/20 p-1 text-[#F5F5F0] shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+      "z-50 min-w-[8rem] overflow-hidden p-1 text-white",
+      // Glass effect
+      "bg-[#12121A]/95 backdrop-blur-xl",
+      "border border-white/[0.1]",
+      "rounded-xl",
+      "shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+      // Animations
+      "data-[state=open]:animate-in data-[state=closed]:animate-out",
+      "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+      "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
+      "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
       className
     )}
     {...props}
@@ -64,8 +78,18 @@ const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden bg-[#080808] border-2 border-[#F5F5F0]/20 p-1 text-[#F5F5F0] shadow-lg",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "z-50 min-w-[8rem] overflow-hidden p-1 text-white",
+        // Glass effect
+        "bg-[#12121A]/95 backdrop-blur-xl",
+        "border border-white/[0.1]",
+        "rounded-xl",
+        "shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+        // Animations
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
+        "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className
       )}
       {...props}
@@ -83,7 +107,10 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center px-2 py-1.5 text-sm outline-none transition-colors focus:bg-[#FFCC00] focus:text-[#080808] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center px-3 py-2 text-sm rounded-lg outline-none",
+      "transition-colors duration-150",
+      "focus:bg-[#FFE500] focus:text-[#0A0A0F]",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       inset && "pl-8",
       className
     )}
@@ -99,7 +126,10 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-[#FFCC00] focus:text-[#080808] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center py-2 pl-8 pr-3 text-sm rounded-lg outline-none",
+      "transition-colors duration-150",
+      "focus:bg-[#FFE500] focus:text-[#0A0A0F]",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     checked={checked}
@@ -123,7 +153,10 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-[#FFCC00] focus:text-[#080808] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center py-2 pl-8 pr-3 text-sm rounded-lg outline-none",
+      "transition-colors duration-150",
+      "focus:bg-[#FFE500] focus:text-[#0A0A0F]",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}
@@ -147,7 +180,7 @@ const DropdownMenuLabel = React.forwardRef<
   <DropdownMenuPrimitive.Label
     ref={ref}
     className={cn(
-      "px-2 py-1.5 text-sm font-bold uppercase tracking-wider text-[#F5F5F0]/60",
+      "px-3 py-1.5 text-xs font-medium text-white/50",
       inset && "pl-8",
       className
     )}
@@ -162,7 +195,7 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-[#F5F5F0]/10", className)}
+    className={cn("-mx-1 my-1 h-px bg-white/[0.08]", className)}
     {...props}
   />
 ));
@@ -174,7 +207,7 @@ const DropdownMenuShortcut = ({
 }: React.HTMLAttributes<HTMLSpanElement>) => {
   return (
     <span
-      className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
+      className={cn("ml-auto text-xs tracking-widest opacity-50", className)}
       {...props}
     />
   );

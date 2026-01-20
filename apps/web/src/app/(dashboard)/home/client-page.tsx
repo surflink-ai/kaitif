@@ -236,14 +236,21 @@ export default function ClientFeed({ userId }: ClientFeedProps) {
         ))}
 
         {loading && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin text-[#FFCC00]" />
+          <div className="flex justify-center py-8">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.05] backdrop-blur-sm">
+              <Loader2 className="h-5 w-5 animate-spin text-[#FFE500]" />
+              <span className="text-sm text-white/60">Loading...</span>
+            </div>
           </div>
         )}
 
         {!loading && items.length === 0 && (
-          <div className="text-center py-10">
-            <p className="text-[#F5F5F0]/60">No activity yet. Be the first to post!</p>
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/[0.05] mb-4">
+              <span className="text-3xl">🛹</span>
+            </div>
+            <p className="text-white/60 mb-2">No activity yet</p>
+            <p className="text-sm text-white/40">Be the first to post!</p>
           </div>
         )}
 

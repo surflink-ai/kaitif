@@ -49,19 +49,22 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-[#080808]">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:w-64 md:flex-col bg-[#080808] border-r-2 border-[#F5F5F0]/10">
+    <div className="min-h-screen bg-[#0A0A0F]">
+      {/* Desktop Sidebar - Glass style */}
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:w-64 md:flex-col bg-[#0A0A0F]/80 backdrop-blur-2xl border-r border-white/[0.08]">
+        {/* Inner highlight */}
+        <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-white/10 via-white/5 to-white/10" />
+        
         {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b-2 border-[#F5F5F0]/10 px-6">
-          <Link href="/home" className="text-2xl font-bold tracking-wider text-[#FFCC00]">
+        <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-6">
+          <Link href="/home" className="text-2xl font-bold tracking-tight text-[#FFE500]">
             KAITIF
           </Link>
           {userId && <NotificationBell userId={userId} />}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4">
+        <nav className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           <ul className="space-y-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -70,12 +73,15 @@ export default function DashboardLayout({
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors",
+                      "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 rounded-xl relative",
                       isActive
-                        ? "bg-[#FFCC00]/10 text-[#FFCC00] border-l-2 border-[#FFCC00]"
-                        : "text-[#F5F5F0]/60 hover:bg-[#F5F5F0]/5 hover:text-[#F5F5F0]"
+                        ? "bg-[#FFE500]/10 text-[#FFE500]"
+                        : "text-white/50 hover:bg-white/[0.05] hover:text-white/80"
                     )}
                   >
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#FFE500] rounded-r-full shadow-[0_0_10px_rgba(255,229,0,0.5)]" />
+                    )}
                     <item.icon className="h-5 w-5" />
                     {item.label}
                   </Link>
@@ -86,10 +92,10 @@ export default function DashboardLayout({
         </nav>
 
         {/* User Section */}
-        <div className="border-t-2 border-[#F5F5F0]/10 p-4">
+        <div className="border-t border-white/[0.08] p-4">
           <Button
             variant="ghost"
-            className="w-full justify-start text-[#F5F5F0]/60 hover:text-[#F5F5F0]"
+            className="w-full justify-start text-white/50 hover:text-white hover:bg-white/[0.05]"
             onClick={handleSignOut}
           >
             <LogOut className="h-5 w-5 mr-3" />
@@ -98,25 +104,28 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b-2 border-[#F5F5F0]/10 bg-[#080808] px-4 safe-area-inset-top">
-        <Link href="/home" className="text-xl font-bold tracking-wider text-[#FFCC00]">
+      {/* Mobile Header - Glass style */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between bg-[#0A0A0F]/80 backdrop-blur-2xl border-b border-white/[0.08] px-4 safe-area-inset-top">
+        {/* Bottom highlight line */}
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        
+        <Link href="/home" className="text-xl font-bold tracking-tight text-[#FFE500]">
           KAITIF
         </Link>
         <div className="flex items-center gap-2">
           {userId && <NotificationBell userId={userId} />}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-[#F5F5F0]"
+            className="p-2 text-white/70 hover:text-white rounded-xl hover:bg-white/[0.05] transition-colors"
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - Glass style */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-[#080808]">
+        <div className="md:hidden fixed inset-0 z-40 bg-[#0A0A0F]/95 backdrop-blur-xl animate-fade-in">
           <div className="pt-20 px-4 safe-area-inset-top">
             <nav>
               <ul className="space-y-2">
@@ -128,10 +137,10 @@ export default function DashboardLayout({
                         href={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-4 text-lg font-bold uppercase tracking-wider transition-colors",
+                          "flex items-center gap-3 px-4 py-4 text-lg font-medium transition-all duration-200 rounded-2xl",
                           isActive
-                            ? "bg-[#FFCC00]/10 text-[#FFCC00]"
-                            : "text-[#F5F5F0]/60 hover:text-[#F5F5F0]"
+                            ? "bg-[#FFE500]/10 text-[#FFE500]"
+                            : "text-white/60 hover:bg-white/[0.05] hover:text-white"
                         )}
                       >
                         <item.icon className="h-6 w-6" />
@@ -142,13 +151,13 @@ export default function DashboardLayout({
                 })}
               </ul>
             </nav>
-            <div className="mt-8 pt-8 border-t-2 border-[#F5F5F0]/10">
+            <div className="mt-8 pt-8 border-t border-white/[0.08]">
               <Button
                 variant="ghost"
-                className="w-full justify-start text-[#F5F5F0]/60"
+                className="w-full justify-start text-white/50 hover:text-white text-lg py-4"
                 onClick={handleSignOut}
               >
-                <LogOut className="h-5 w-5 mr-3" />
+                <LogOut className="h-6 w-6 mr-3" />
                 Sign Out
               </Button>
             </div>

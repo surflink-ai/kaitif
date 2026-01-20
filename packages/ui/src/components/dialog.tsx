@@ -20,7 +20,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80",
+      "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm",
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
@@ -40,9 +40,16 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
-        "gap-4 bg-[#080808] p-6 border-2 border-[#F5F5F0]/20",
-        "shadow-[8px_8px_0px_0px_rgba(255,204,0,0.3)]",
-        "duration-200",
+        "gap-4 p-6",
+        // Glass effect
+        "bg-[#12121A]/95 backdrop-blur-2xl",
+        "border border-white/[0.1]",
+        "rounded-2xl",
+        "shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)]",
+        // Inner highlight
+        "before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:rounded-t-2xl",
+        // Animations
+        "duration-300",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -53,8 +60,8 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#FFCC00] focus:ring-offset-2 focus:ring-offset-[#080808] disabled:pointer-events-none">
-        {React.createElement(X as any, { className: "h-5 w-5 text-[#F5F5F0]" })}
+      <DialogPrimitive.Close className="absolute right-4 top-4 p-1 rounded-lg opacity-70 transition-all hover:opacity-100 hover:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-[#FFE500]/30 disabled:pointer-events-none">
+        {React.createElement(X as any, { className: "h-5 w-5 text-white" })}
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -97,7 +104,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-xl font-bold uppercase tracking-wider text-[#F5F5F0]",
+      "text-lg font-semibold tracking-tight text-white",
       className
     )}
     {...props}
@@ -111,7 +118,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-[#F5F5F0]/60", className)}
+    className={cn("text-sm text-white/60", className)}
     {...props}
   />
 ));
