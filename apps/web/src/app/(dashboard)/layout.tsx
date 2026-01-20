@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Ticket, FileText, Calendar, Trophy, ShoppingBag, MessageCircle, User, LogOut, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, BottomDock, BottomDockItem, Avatar, cn } from "@kaitif/ui";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell";
 
 const navItems = [
   { href: "/home", icon: Home, label: "Home" },
@@ -27,7 +28,19 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const supabase = createClient();
+
+  // Get current user ID for notifications
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUser();
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -40,10 +53,11 @@ export default function DashboardLayout({
       {/* Desktop Sidebar */}
       <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:w-64 md:flex-col bg-[#080808] border-r-2 border-[#F5F5F0]/10">
         {/* Logo */}
-        <div className="flex h-16 items-center border-b-2 border-[#F5F5F0]/10 px-6">
+        <div className="flex h-16 items-center justify-between border-b-2 border-[#F5F5F0]/10 px-6">
           <Link href="/home" className="text-2xl font-bold tracking-wider text-[#FFCC00]">
             KAITIF
           </Link>
+          {userId && <NotificationBell userId={userId} />}
         </div>
 
         {/* Navigation */}
@@ -85,22 +99,25 @@ export default function DashboardLayout({
       </aside>
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b-2 border-[#F5F5F0]/10 bg-[#080808] px-4">
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b-2 border-[#F5F5F0]/10 bg-[#080808] px-4 safe-area-inset-top">
         <Link href="/home" className="text-xl font-bold tracking-wider text-[#FFCC00]">
           KAITIF
         </Link>
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 text-[#F5F5F0]"
-        >
-          {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {userId && <NotificationBell userId={userId} />}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 text-[#F5F5F0]"
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-[#080808]">
-          <div className="pt-20 px-4">
+          <div className="pt-20 px-4 safe-area-inset-top">
             <nav>
               <ul className="space-y-2">
                 {navItems.map((item) => {
@@ -140,7 +157,7 @@ export default function DashboardLayout({
       )}
 
       {/* Main Content */}
-      <main className="md:pl-64 pb-20 md:pb-0 pt-16 md:pt-0 min-h-screen">
+      <main className="md:pl-64 min-h-screen dashboard-content-padding">
         <div className="p-6 md:p-8">
           {children}
         </div>

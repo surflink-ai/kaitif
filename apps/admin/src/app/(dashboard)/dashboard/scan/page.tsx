@@ -56,11 +56,11 @@ export default function ScannerPage() {
       if (result.valid && result.pass) {
         setScanResult({ status: "success", data: result.pass });
         // Play success sound
-        new Audio("/sounds/success.mp3").play().catch(() => {});
+        new Audio("/sounds/success.wav").play().catch(() => {});
       } else {
         setScanResult({ status: "error", error: result.error || "Invalid Pass" });
         // Play error sound
-        new Audio("/sounds/error.mp3").play().catch(() => {});
+        new Audio("/sounds/error.wav").play().catch(() => {});
       }
     } catch (error) {
       setScanResult({ status: "error", error: "Failed to validate pass" });

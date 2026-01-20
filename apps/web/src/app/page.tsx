@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Calendar, Trophy, ShoppingBag, MapPin, Clock, Shield, Zap } from "lucide-react";
+import { ArrowRight, Calendar, Trophy, ShoppingBag, MapPin, Clock, Shield, Zap, Smartphone, Download, Check } from "lucide-react";
 import { Button, Container, Card, CardContent, Badge, HypeMeter } from "@kaitif/ui";
 import { PARK_INFO, OPERATING_HOURS, PARK_RULES } from "@kaitif/db";
+import { PhoneMockup, AnimatedAppScreens } from "@/components/landing";
 
 export default function LandingPage() {
   return (
@@ -26,6 +27,9 @@ export default function LandingPage() {
               </a>
               <a href="#hours" className="text-sm font-bold uppercase tracking-wider text-[#F5F5F0]/60 hover:text-[#F5F5F0] transition-colors">
                 Hours
+              </a>
+              <a href="#app" className="text-sm font-bold uppercase tracking-wider text-[#F5F5F0]/60 hover:text-[#F5F5F0] transition-colors">
+                App
               </a>
             </div>
             <div className="flex items-center gap-4">
@@ -147,6 +151,62 @@ export default function LandingPage() {
                 </p>
               </CardContent>
             </Card>
+          </div>
+        </Container>
+      </section>
+
+      {/* App Preview Section */}
+      <section className="py-24 overflow-hidden bg-[#0A0A0A] border-y-2 border-[#F5F5F0]/10">
+        <Container>
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Text content */}
+            <div className="order-2 lg:order-1">
+              <Badge variant="accent" className="mb-6">Your Skate Companion</Badge>
+              <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-tight mb-6">
+                Track Your <span className="text-[#FFCC00]">Progress</span>
+              </h2>
+              <p className="text-lg text-[#F5F5F0]/60 mb-8">
+                Level up your skating with our app. Earn XP for every session, complete challenges, 
+                unlock badges, and climb the leaderboard. Your entire skate career in your pocket.
+              </p>
+              
+              <div className="space-y-4 mb-8">
+                {[
+                  { text: "Real-time XP tracking and level progression", color: "#FFCC00" },
+                  { text: "Digital passes stored in Apple or Google Wallet", color: "#00E6E6" },
+                  { text: "Complete challenges and earn exclusive badges", color: "#FFCC00" },
+                  { text: "Compete on the community leaderboard", color: "#00E6E6" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div 
+                      className="flex-shrink-0 h-6 w-6 flex items-center justify-center"
+                      style={{ backgroundColor: `${item.color}20`, border: `2px solid ${item.color}` }}
+                    >
+                      <Check className="h-3 w-3" style={{ color: item.color }} />
+                    </div>
+                    <span className="text-[#F5F5F0]/80">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Link href="/signup">
+                <Button size="lg" className="group">
+                  Start Tracking
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </div>
+            
+            {/* Right: Animated phone mockup */}
+            <div className="order-1 lg:order-2 flex justify-center">
+              <div className="relative">
+                {/* Glow effect behind phone */}
+                <div className="absolute inset-0 bg-[#FFCC00]/20 blur-[100px] rounded-full scale-75" />
+                <PhoneMockup className="relative z-10" borderColor="border-[#333]">
+                  <AnimatedAppScreens />
+                </PhoneMockup>
+              </div>
+            </div>
           </div>
         </Container>
       </section>
@@ -319,6 +379,112 @@ export default function LandingPage() {
                   <span className="text-[#F5F5F0]/40">Map</span>
                 </div>
               </Card>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Install App Section */}
+      <section id="app" className="py-24 bg-[#0A0A0A] border-t-2 border-[#F5F5F0]/10">
+        <Container>
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Phone mockup showing home screen */}
+            <div className="flex justify-center">
+              <div className="relative">
+                {/* Glow effect */}
+                <div className="absolute inset-0 bg-[#00E6E6]/15 blur-[80px] rounded-full scale-90" />
+                <PhoneMockup className="relative z-10" borderColor="border-[#333]">
+                  {/* Simulated home screen with Kaitif app */}
+                  <div className="h-full w-full bg-gradient-to-b from-[#1a1a2e] to-[#16213e] p-6 pt-10">
+                    {/* Time */}
+                    <div className="text-center mb-8">
+                      <p className="text-4xl font-light text-white">9:41</p>
+                      <p className="text-sm text-white/60">Monday, January 19</p>
+                    </div>
+                    
+                    {/* App icons grid */}
+                    <div className="grid grid-cols-4 gap-4 mb-8">
+                      {[...Array(8)].map((_, i) => (
+                        <div key={i} className="aspect-square bg-white/10 rounded-2xl" />
+                      ))}
+                    </div>
+                    
+                    {/* Kaitif app icon - highlighted */}
+                    <div className="flex flex-col items-center">
+                      <div className="relative">
+                        <div className="absolute -inset-2 bg-[#FFCC00]/30 blur-xl rounded-3xl animate-pulse" />
+                        <div className="relative h-16 w-16 bg-[#FFCC00] rounded-2xl flex items-center justify-center shadow-lg">
+                          <span className="text-2xl font-bold text-[#080808]">K</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-white mt-2 font-medium">Kaitif</p>
+                    </div>
+
+                    {/* Dock */}
+                    <div className="absolute bottom-8 left-4 right-4">
+                      <div className="bg-white/10 backdrop-blur-md rounded-3xl p-3 flex justify-around">
+                        {[...Array(4)].map((_, i) => (
+                          <div key={i} className="h-10 w-10 bg-white/20 rounded-xl" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </PhoneMockup>
+              </div>
+            </div>
+
+            {/* Right: Install instructions */}
+            <div>
+              <Badge variant="accent" className="mb-6">
+                <Smartphone className="h-3 w-3 mr-1" />
+                Progressive Web App
+              </Badge>
+              <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-tight mb-6">
+                Take Kaitif <span className="text-[#00E6E6]">Everywhere</span>
+              </h2>
+              <p className="text-lg text-[#F5F5F0]/60 mb-8">
+                Install Kaitif directly to your phone for the best experience. 
+                No app store required. Works offline, lightning fast, and always up to date.
+              </p>
+
+              {/* Install steps */}
+              <div className="space-y-4 mb-8">
+                <div className="flex items-start gap-4 p-4 border-2 border-[#F5F5F0]/10 hover:border-[#00E6E6]/30 transition-colors">
+                  <span className="flex-shrink-0 h-8 w-8 bg-[#00E6E6] flex items-center justify-center font-bold text-[#080808]">1</span>
+                  <div>
+                    <p className="font-bold text-[#F5F5F0]">Open in Safari or Chrome</p>
+                    <p className="text-sm text-[#F5F5F0]/60">Visit kaitif.com on your mobile browser</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 p-4 border-2 border-[#F5F5F0]/10 hover:border-[#00E6E6]/30 transition-colors">
+                  <span className="flex-shrink-0 h-8 w-8 bg-[#00E6E6] flex items-center justify-center font-bold text-[#080808]">2</span>
+                  <div>
+                    <p className="font-bold text-[#F5F5F0]">Tap Share or Menu</p>
+                    <p className="text-sm text-[#F5F5F0]/60">Look for the share icon or three-dot menu</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 p-4 border-2 border-[#F5F5F0]/10 hover:border-[#00E6E6]/30 transition-colors">
+                  <span className="flex-shrink-0 h-8 w-8 bg-[#00E6E6] flex items-center justify-center font-bold text-[#080808]">3</span>
+                  <div>
+                    <p className="font-bold text-[#F5F5F0]">Add to Home Screen</p>
+                    <p className="text-sm text-[#F5F5F0]/60">Select &quot;Add to Home Screen&quot; and confirm</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Benefits */}
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { icon: Zap, text: "Lightning Fast" },
+                  { icon: Download, text: "Works Offline" },
+                  { icon: Shield, text: "Secure & Private" },
+                ].map((benefit, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[#F5F5F0]/5 border border-[#F5F5F0]/10">
+                    <benefit.icon className="h-4 w-4 text-[#00E6E6]" />
+                    <span className="text-sm text-[#F5F5F0]/80">{benefit.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </Container>

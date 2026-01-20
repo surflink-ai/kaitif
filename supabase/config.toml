@@ -67,5 +67,5 @@ secret = "env(APPLE_CLIENT_SECRET)"
 [analytics]
 enabled = false
 
-[experimental]
-webhook_enabled = false
+# [experimental]
+# webhook_enabled = false

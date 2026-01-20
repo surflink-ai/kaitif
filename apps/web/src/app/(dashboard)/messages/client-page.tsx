@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button, Input, Avatar, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, useToast } from "@kaitif/ui";
-import { Search, Plus, Send, Megaphone, MessageCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { Search, Plus, Send, Megaphone, MessageCircle, ArrowLeft, Loader2, Circle } from "lucide-react";
 import { Conversation, MessageWithRelations, User } from "@kaitif/db";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useRealtimeTable } from "@/lib/hooks/use-realtime";
+import { useConversationPresence } from "@/lib/hooks/use-presence";
 
 // Simple relative time helper
 function formatRelativeTime(dateString: string | Date) {
@@ -20,14 +22,24 @@ function formatRelativeTime(dateString: string | Date) {
   return date.toLocaleDateString();
 }
 
+interface MessageRealtime {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+}
+
 interface MessagesClientPageProps {
   initialConversations: (Conversation & { members: any[]; lastMessage?: any; unreadCount: number })[];
   currentUserId: string;
+  currentUserName?: string;
 }
 
 export default function MessagesClientPage({
   initialConversations,
   currentUserId,
+  currentUserName,
 }: MessagesClientPageProps) {
   const [conversations, setConversations] = useState(initialConversations);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -36,8 +48,21 @@ export default function MessagesClientPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const supabase = createClient();
   const { toast } = useToast();
+
+  // Presence for typing indicators and online status
+  const {
+    typingUsers,
+    isUserOnline,
+    setTyping,
+    isConnected: presenceConnected,
+  } = useConversationPresence(
+    selectedConversationId || "",
+    currentUserId,
+    currentUserName
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,58 +72,58 @@ export default function MessagesClientPage({
     scrollToBottom();
   }, [messages]);
 
-  // Realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel("messages_channel")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        async (payload) => {
-          const newMessage = payload.new as any;
-          
-          // Update conversations list (last message, unread count)
-          setConversations((prev) => 
-            prev.map((conv) => {
-              if (conv.id === newMessage.conversationId) {
-                return {
-                  ...conv,
-                  lastMessage: { content: newMessage.content, createdAt: newMessage.createdAt },
-                  updatedAt: new Date(),
-                  unreadCount: conv.id !== selectedConversationId ? conv.unreadCount + 1 : conv.unreadCount
-                };
-              }
-              return conv;
-            }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-          );
+  // Handle typing indicator
+  const handleTyping = useCallback(() => {
+    setTyping(true);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      setTyping(false);
+    }, 2000);
+  }, [setTyping]);
 
-          // If looking at this conversation, add message
-          if (selectedConversationId === newMessage.conversationId) {
-            // Fetch sender info if needed, or optimistic update
-            // For simplicity, we might just re-fetch or append if we have sender info
-            // Since payload doesn't have sender relations, fetching is safer or we need to look up sender
-            // But we can append a partial message
-            // Ideally we fetch the full message with relations
-            
-            // fetch the single message
-            const { data: fullMessage } = await supabase
-                .from('messages')
-                .select('*, sender:users(id, name, avatarUrl), replyTo:messages(*)')
-                .eq('id', newMessage.id)
-                .single();
-            
-            if (fullMessage) {
-                 setMessages((prev) => [...prev, fullMessage as any]);
+  // Realtime subscription for new messages using the hook
+  useRealtimeTable<MessageRealtime>({
+    table: "messages",
+    onInsert: async (newMessage) => {
+      // Update conversations list (last message, unread count)
+      setConversations((prev) =>
+        prev
+          .map((conv) => {
+            if (conv.id === newMessage.conversationId) {
+              return {
+                ...conv,
+                lastMessage: { content: newMessage.content, createdAt: newMessage.createdAt },
+                updatedAt: new Date(),
+                unreadCount:
+                  conv.id !== selectedConversationId ? conv.unreadCount + 1 : conv.unreadCount,
+              };
             }
-          }
-        }
-      )
-      .subscribe();
+            return conv;
+          })
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      );
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedConversationId, supabase]);
+      // If looking at this conversation, add message
+      if (selectedConversationId === newMessage.conversationId) {
+        // Fetch the full message with relations
+        const { data: fullMessage } = await supabase
+          .from("messages")
+          .select("*, sender:users(id, name, avatar), replyTo:messages(*)")
+          .eq("id", newMessage.id)
+          .single();
+
+        if (fullMessage) {
+          setMessages((prev) => [...prev, fullMessage as any]);
+        }
+      }
+    },
+  });
 
   // Fetch messages when conversation selected
   useEffect(() => {
@@ -265,6 +290,11 @@ export default function MessagesClientPage({
                 </Button>
                 {selectedConv && (() => {
                     const display = getConversationDisplay(selectedConv);
+                    const otherMember = selectedConv.type === "DM" 
+                      ? selectedConv.members.find((m: any) => m.userId !== currentUserId)
+                      : null;
+                    const isOnline = otherMember ? isUserOnline(otherMember.userId) : false;
+                    
                     return (
                         <>
                             {display.isAnnouncement ? (
@@ -272,12 +302,23 @@ export default function MessagesClientPage({
                                 <Megaphone className="h-5 w-5 text-[#FFCC00]" />
                             </div>
                             ) : (
-                            <Avatar name={display.name} src={display.avatarUrl} size="md" />
+                            <div className="relative">
+                              <Avatar name={display.name} src={display.avatarUrl} size="md" />
+                              {selectedConv.type === "DM" && (
+                                <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#080808] ${
+                                  isOnline ? 'bg-green-500' : 'bg-gray-500'
+                                }`} />
+                              )}
+                            </div>
                             )}
                             <div className="flex-1">
                             <h2 className="font-bold">{display.name}</h2>
-                            {display.isAnnouncement && (
+                            {display.isAnnouncement ? (
                                 <p className="text-xs text-[#F5F5F0]/40">Official announcements from Kaitif</p>
+                            ) : selectedConv.type === "DM" && (
+                                <p className="text-xs text-[#F5F5F0]/40">
+                                  {isOnline ? 'Online' : 'Offline'}
+                                </p>
                             )}
                             </div>
                         </>
@@ -321,18 +362,48 @@ export default function MessagesClientPage({
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Typing Indicator */}
+              {typingUsers.length > 0 && (
+                <div className="px-4 py-2 text-xs text-[#F5F5F0]/60 flex items-center gap-2">
+                  <span className="flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-[#FFCC00] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-[#FFCC00] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-[#FFCC00] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                  <span>
+                    {typingUsers.length === 1
+                      ? `${typingUsers[0].userName || 'Someone'} is typing...`
+                      : `${typingUsers.length} people are typing...`}
+                  </span>
+                </div>
+              )}
+
               {/* Message Input */}
-              {selectedConv?.isAnnouncement === false && ( // Only allow reply if not announcement? Actually check logic
+              {selectedConv?.isAnnouncement === false && (
                 <div className="p-4 border-t-2 border-[#F5F5F0]/10">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Type a message..."
                       value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onChange={(e) => {
+                        setMessageInput(e.target.value);
+                        handleTyping();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setTyping(false);
+                          handleSendMessage();
+                        }
+                      }}
                       className="flex-1"
                     />
-                    <Button onClick={handleSendMessage} disabled={!messageInput.trim()}>
+                    <Button 
+                      onClick={() => {
+                        setTyping(false);
+                        handleSendMessage();
+                      }} 
+                      disabled={!messageInput.trim()}
+                    >
                       <Send className="h-5 w-5" />
                     </Button>
                   </div>

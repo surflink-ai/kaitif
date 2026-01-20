@@ -10,16 +10,24 @@ const BottomDock = React.forwardRef<HTMLDivElement, BottomDockProps>(
     return (
       <nav
         ref={ref}
+        role="navigation"
+        aria-label="Main navigation"
         className={cn(
+          // Positioning
           "fixed bottom-0 left-0 right-0 z-50",
-          "bg-[#080808] border-t-2 border-[#F5F5F0]/10",
-          "safe-area-inset-bottom",
+          // Background with backdrop blur for modern iOS feel
+          "bg-[#080808]/90 backdrop-blur-lg",
+          "border-t border-[#F5F5F0]/10",
+          // Safe area padding for home indicator
+          "pb-[env(safe-area-inset-bottom)]",
+          // Hide on desktop
           "md:hidden",
           className
         )}
         {...props}
       >
-        <div className="flex h-16 items-center justify-around px-2">
+        {/* Min height 49pt matches iOS tab bar, content area for touch targets */}
+        <div className="flex h-[52px] items-stretch justify-around">
           {children}
         </div>
       </nav>
@@ -40,10 +48,18 @@ const BottomDockItem = React.forwardRef<HTMLButtonElement, BottomDockItemProps>(
     return (
       <button
         ref={ref}
+        aria-label={label}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "relative flex flex-1 flex-col items-center justify-center gap-1 py-2",
-          "text-[#F5F5F0]/60 transition-colors",
+          // Full touch target - minimum 44pt per Apple HIG
+          "relative flex flex-1 flex-col items-center justify-center gap-0.5",
+          "min-h-[44px] min-w-[44px]",
+          // Colors and transitions
+          "text-[#F5F5F0]/50 transition-all duration-150",
+          // Active state
           active && "text-[#FFCC00]",
+          // Press/tap state feedback
+          "active:scale-95 active:opacity-70",
           className
         )}
         {...props}
@@ -51,12 +67,12 @@ const BottomDockItem = React.forwardRef<HTMLButtonElement, BottomDockItemProps>(
         <span className="relative">
           {icon}
           {badge !== undefined && badge > 0 && (
-            <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center bg-[#FFCC00] px-1 text-[10px] font-bold text-[#080808]">
+            <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FFCC00] px-1 text-[10px] font-bold text-[#080808]">
               {badge > 99 ? "99+" : badge}
             </span>
           )}
         </span>
-        <span className="text-[10px] font-bold uppercase tracking-wider">
+        <span className="text-[10px] font-medium uppercase tracking-wider">
           {label}
         </span>
       </button>

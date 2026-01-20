@@ -76,6 +76,18 @@
     padding-top: env(safe-area-inset-top);
   }
 
+  /* Dashboard content safe area - accounts for header + safe area on mobile only */
+  .dashboard-content-padding {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4rem);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4rem);
+  }
+  @media (min-width: 768px) {
+    .dashboard-content-padding {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+  }
+
   /* Text gradient */
   .text-gradient {
     @apply bg-gradient-to-r from-[#FFCC00] to-[#00E6E6] bg-clip-text text-transparent;

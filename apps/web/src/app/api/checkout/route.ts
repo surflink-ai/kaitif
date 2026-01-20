@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createPassCheckoutSession } from "@/lib/stripe";
 import { purchasePassSchema } from "@kaitif/db";
+import { ensureUserExists } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +12,9 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Ensure user exists in public.users table
+    await ensureUserExists(user);
 
     const body = await request.json();
     const { type } = purchasePassSchema.parse(body);

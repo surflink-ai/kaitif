@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { signWaiver } from "@kaitif/db";
+import { ensureUserExists } from "@/lib/utils";
 import { z } from "zod";
 
 const signWaiverSchema = z.object({
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Ensure user exists in public.users table
+    await ensureUserExists(user);
 
     const body = await request.json();
     const { waiverVersionId, signature } = signWaiverSchema.parse(body);

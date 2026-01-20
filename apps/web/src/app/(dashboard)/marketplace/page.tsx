@@ -3,6 +3,8 @@ import { getListings, getUserById } from "@kaitif/db";
 import MarketplaceClientPage from "./client-page";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function MarketplacePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

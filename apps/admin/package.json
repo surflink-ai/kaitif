@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@kaitif/db": "workspace:*",
+    "@kaitif/email": "workspace:*",
     "@kaitif/ui": "workspace:*",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.0",

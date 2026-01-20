@@ -12,21 +12,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { listingId } = await request.json();
+    const body = await request.json();
+    const { listingId } = body;
+
+    if (!listingId) {
+      return NextResponse.json({ error: "Listing ID is required" }, { status: 400 });
+    }
 
     // 1. Get Listing & Seller
     const listing = await getListingById(supabase, listingId);
-    if (!listing || listing.status !== "ACTIVE") {
-      return NextResponse.json({ error: "Listing not available" }, { status: 400 });
+    if (!listing) {
+      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+    }
+
+    if (listing.status !== "ACTIVE") {
+      return NextResponse.json({ error: "Listing is no longer available" }, { status: 400 });
     }
 
     const seller = await getUserById(supabase, listing.sellerId);
-    if (!seller || !seller.stripeAccountId) {
-      return NextResponse.json({ error: "Seller cannot accept payments" }, { status: 400 });
+    if (!seller) {
+      return NextResponse.json({ error: "Seller not found" }, { status: 404 });
+    }
+
+    if (!seller.stripeAccountId) {
+      return NextResponse.json({ 
+        error: "Seller has not set up payment receiving. Please contact the seller." 
+      }, { status: 400 });
     }
 
     if (seller.id === user.id) {
-        return NextResponse.json({ error: "Cannot buy your own listing" }, { status: 400 });
+      return NextResponse.json({ error: "You cannot purchase your own listing" }, { status: 400 });
+    }
+
+    // Verify seller's Stripe account is ready to accept payments
+    try {
+      const account = await getStripe().accounts.retrieve(seller.stripeAccountId);
+      if (!account.charges_enabled) {
+        return NextResponse.json({ 
+          error: "Seller's payment account is not fully set up" 
+        }, { status: 400 });
+      }
+    } catch (stripeError) {
+      console.error("Stripe account verification error:", stripeError);
+      return NextResponse.json({ 
+        error: "Could not verify seller's payment account" 
+      }, { status: 400 });
     }
 
     // 2. Create Transaction Record (Reservations)
@@ -35,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to initiate transaction" }, { status: 500 });
     }
 
-    // 3. Create Stripe Session
+    // 3. Create Stripe Session with Connect
     const amount = listing.price; // in cents
     const applicationFeeAmount = Math.round(amount * (MARKETPLACE_FEE_PERCENT / 100));
 

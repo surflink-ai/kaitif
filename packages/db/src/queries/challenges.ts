@@ -209,14 +209,75 @@ export async function getPendingCompletions(
   return data as (ChallengeCompletion & { user: User; challenge: Challenge })[];
 }
 
-// Get challenge leaderboard (users with most completions)
+// Get challenge leaderboard (users with most approved completions)
 export async function getChallengeLeaderboard(
   supabase: SupabaseClient,
   limit: number = 10
-): Promise<{ user: User; count: number }[]> {
-  // This is a complex query, simplifying for now
-  // In real app, might need a view or RPC
-  return []; 
+): Promise<{ user: User; completionCount: number; totalXP: number }[]> {
+  // Get all approved completions grouped by user
+  const { data: completions, error: completionsError } = await supabase
+    .from("challenge_completions")
+    .select(`
+      userId,
+      xpAwarded,
+      user:users (*)
+    `)
+    .eq("status", "APPROVED");
+
+  if (completionsError || !completions) {
+    console.error("Error fetching completions for leaderboard:", completionsError);
+    return [];
+  }
+
+  // Aggregate by user
+  const userStats = new Map<string, { user: User; completionCount: number; totalXP: number }>();
+  
+  for (const completion of completions as any[]) {
+    const userId = completion.userId;
+    const existing = userStats.get(userId);
+    
+    if (existing) {
+      existing.completionCount += 1;
+      existing.totalXP += completion.xpAwarded || 0;
+    } else if (completion.user) {
+      userStats.set(userId, {
+        user: completion.user as User,
+        completionCount: 1,
+        totalXP: completion.xpAwarded || 0,
+      });
+    }
+  }
+
+  // Convert to array and sort by completion count, then by XP
+  const leaderboard = Array.from(userStats.values())
+    .sort((a, b) => {
+      if (b.completionCount !== a.completionCount) {
+        return b.completionCount - a.completionCount;
+      }
+      return b.totalXP - a.totalXP;
+    })
+    .slice(0, limit);
+
+  return leaderboard;
+}
+
+// Get XP leaderboard (users sorted by total XP)
+export async function getXPLeaderboard(
+  supabase: SupabaseClient,
+  limit: number = 10
+): Promise<User[]> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .order("xp", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching XP leaderboard:", error);
+    return [];
+  }
+
+  return data as User[];
 }
 
 // Get badges

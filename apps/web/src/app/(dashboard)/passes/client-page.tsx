@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge, formatPrice, useToast } from "@kaitif/ui";
+import { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge, formatPrice, useToast, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@kaitif/ui";
 import { PASS_PRICES, PASS_DURATION, type Pass } from "@kaitif/db";
-import { Check, Ticket, Calendar, CreditCard, Wallet, Loader2 } from "lucide-react";
+import { Check, Ticket, Calendar, CreditCard, Wallet, Loader2, Apple, Smartphone, ChevronDown } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 type PassType = "DAY" | "WEEK" | "MONTH" | "ANNUAL";
+type WalletType = "apple" | "google" | null;
 
 const passInfo: Record<PassType, { name: string; description: string; features: string[] }> = {
   DAY: {
@@ -38,7 +39,92 @@ interface PassesClientPageProps {
 export default function PassesClientPage({ activePass }: PassesClientPageProps) {
   const [selectedPass, setSelectedPass] = useState<PassType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState<WalletType>(null);
+  const [deviceType, setDeviceType] = useState<"ios" | "android" | "other">("other");
   const { toast } = useToast();
+
+  // Detect device type for wallet button
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/.test(ua)) {
+      setDeviceType("ios");
+    } else if (/Android/.test(ua)) {
+      setDeviceType("android");
+    } else {
+      setDeviceType("other");
+    }
+  }, []);
+
+  const handleAddToAppleWallet = async () => {
+    if (!activePass) return;
+    
+    setWalletLoading("apple");
+    try {
+      // Download the .pkpass file
+      const response = await fetch(`/api/wallet/apple/${activePass.id}`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate pass");
+      }
+
+      // Create a blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kaitif-pass-${activePass.barcodeId}.pkpass`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Pass Downloaded",
+        description: "Open the file to add it to your Apple Wallet.",
+      });
+    } catch (error) {
+      console.error("Apple Wallet error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add to Apple Wallet",
+        variant: "destructive",
+      });
+    } finally {
+      setWalletLoading(null);
+    }
+  };
+
+  const handleAddToGoogleWallet = async () => {
+    if (!activePass) return;
+    
+    setWalletLoading("google");
+    try {
+      const response = await fetch(`/api/wallet/google/${activePass.id}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate pass");
+      }
+
+      // Open Google Wallet save link
+      window.open(data.url, "_blank");
+
+      toast({
+        title: "Google Wallet",
+        description: "Follow the prompts to add your pass.",
+      });
+    } catch (error) {
+      console.error("Google Wallet error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add to Google Wallet",
+        variant: "destructive",
+      });
+    } finally {
+      setWalletLoading(null);
+    }
+  };
 
   const handlePurchase = async () => {
     if (!selectedPass) return;
@@ -223,10 +309,59 @@ export default function PassesClientPage({ activePass }: PassesClientPageProps) 
           </div>
 
           <CardFooter className="flex gap-3">
-            <Button variant="outline" className="flex-1">
-              <Wallet className="h-5 w-5 mr-2" />
-              Add to Wallet
-            </Button>
+            {deviceType === "ios" ? (
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={handleAddToAppleWallet}
+                disabled={walletLoading === "apple"}
+              >
+                {walletLoading === "apple" ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Apple className="h-5 w-5 mr-2" />
+                )}
+                Add to Apple Wallet
+              </Button>
+            ) : deviceType === "android" ? (
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={handleAddToGoogleWallet}
+                disabled={walletLoading === "google"}
+              >
+                {walletLoading === "google" ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Wallet className="h-5 w-5 mr-2" />
+                )}
+                Add to Google Wallet
+              </Button>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex-1" disabled={!!walletLoading}>
+                    {walletLoading ? (
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    ) : (
+                      <Wallet className="h-5 w-5 mr-2" />
+                    )}
+                    Add to Wallet
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleAddToAppleWallet}>
+                    <Apple className="h-4 w-4 mr-2" />
+                    Apple Wallet
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleAddToGoogleWallet}>
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    Google Wallet
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </CardFooter>
         </Card>
 

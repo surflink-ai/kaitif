@@ -11,7 +11,7 @@ export const userProfileSchema = z.object({
 });
 
 export const updateUserSchema = userProfileSchema.extend({
-  role: z.enum(["USER", "STAFF", "ADMIN"]).optional(),
+  role: z.enum(["USER", "ADMIN", "SUPERADMIN"]).optional(),
 });
 
 // ============================================
@@ -174,9 +174,30 @@ export const createAnnouncementSchema = z.object({
 
 export const adminUserUpdateSchema = z.object({
   userId: z.string().uuid(),
-  role: z.enum(["USER", "STAFF", "ADMIN"]).optional(),
+  role: z.enum(["USER", "ADMIN", "SUPERADMIN"]).optional(),
   xp: z.number().int().min(0).optional(),
   level: z.number().int().min(1).max(20).optional(),
+});
+
+// ============================================
+// ROLE & INVITE VALIDATORS
+// ============================================
+
+export const updateUserRoleSchema = z.object({
+  targetUserId: z.string().uuid(),
+  newRole: z.enum(["USER", "ADMIN"]), // Can only assign USER or ADMIN via UI
+  reason: z.string().max(500).optional(),
+});
+
+export const createInviteSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["USER", "ADMIN"]), // Can only invite USER or ADMIN
+});
+
+export const acceptInviteSchema = z.object({
+  token: z.string().min(1),
+  name: z.string().min(2).max(100),
+  password: z.string().min(6).max(100),
 });
 
 export const adminRefundPassSchema = z.object({
@@ -258,3 +279,6 @@ export type PaginationInput = z.infer<typeof paginationSchema>;
 export type EventFilterInput = z.infer<typeof eventFilterSchema>;
 export type ListingFilterInput = z.infer<typeof listingFilterSchema>;
 export type ChallengeFilterInput = z.infer<typeof challengeFilterSchema>;
+export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>;
+export type CreateInviteInput = z.infer<typeof createInviteSchema>;
+export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;

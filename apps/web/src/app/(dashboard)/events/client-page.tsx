@@ -5,6 +5,24 @@ import { Card, CardContent, Button, Badge, HypeMeter, AvatarStack, Tabs, TabsLis
 import { Calendar, MapPin, Users, Clock, Plus, ThumbsUp, CheckCircle, Video, Image as ImageIcon, Camera } from "lucide-react";
 import { EVENT_CATEGORIES, Event, EventSuggestion, EventRSVP, EventCategory } from "@kaitif/db";
 import { useRouter } from "next/navigation";
+import { useRealtimeTable } from "@/lib/hooks/use-realtime";
+import { createClient } from "@/lib/supabase/client";
+
+interface EventRSVPRealtime {
+  id: string;
+  userId: string;
+  eventId: string;
+  status: string;
+  friendCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface EventRealtime {
+  id: string;
+  hypeLevel: number;
+  [key: string]: unknown;
+}
 
 interface EventsClientPageProps {
   upcomingEvents: (Event & { rsvps: any[]; attendances: any[]; media: any[] })[];
@@ -15,12 +33,14 @@ interface EventsClientPageProps {
 }
 
 export default function EventsClientPage({
-  upcomingEvents,
+  upcomingEvents: initialUpcomingEvents,
   pastEvents,
   topSuggestions,
-  userRsvps,
+  userRsvps: initialUserRsvps,
   userId,
 }: EventsClientPageProps) {
+  const [upcomingEvents, setUpcomingEvents] = useState(initialUpcomingEvents);
+  const [userRsvps, setUserRsvps] = useState(initialUserRsvps);
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const [suggestionForm, setSuggestionForm] = useState({ title: "", description: "", category: "OPEN_SESSION" });
@@ -32,6 +52,117 @@ export default function EventsClientPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const supabase = createClient();
+
+  // Realtime: Subscribe to RSVP changes
+  useRealtimeTable<EventRSVPRealtime>({
+    table: "event_rsvps",
+    onInsert: async (newRsvp) => {
+      // Fetch user info for the RSVP
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id, name, avatar")
+        .eq("id", newRsvp.userId)
+        .single();
+      
+      const user = userData as { id: string; name?: string; avatar?: string } | null;
+
+      // Update the event's RSVP list
+      setUpcomingEvents(prev => prev.map(event => {
+        if (event.id === newRsvp.eventId) {
+          const existingRsvpIndex = event.rsvps.findIndex((r: any) => r.userId === newRsvp.userId);
+          if (existingRsvpIndex >= 0) {
+            // Update existing RSVP
+            const updatedRsvps = [...event.rsvps];
+            updatedRsvps[existingRsvpIndex] = { ...newRsvp, user };
+            return { ...event, rsvps: updatedRsvps };
+          } else {
+            // Add new RSVP
+            return { ...event, rsvps: [...event.rsvps, { ...newRsvp, user }] };
+          }
+        }
+        return event;
+      }));
+
+      // Update user's own RSVPs
+      if (newRsvp.userId === userId) {
+        setUserRsvps(prev => ({ ...prev, [newRsvp.eventId]: newRsvp as unknown as EventRSVP }));
+      }
+
+      // Show toast for other users' RSVPs
+      if (newRsvp.userId !== userId && newRsvp.status === "GOING") {
+        toast({
+          title: "New RSVP",
+          description: `${user?.name || "Someone"} just RSVP'd to an event!`,
+        });
+      }
+    },
+    onUpdate: async (updatedRsvp) => {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id, name, avatar")
+        .eq("id", updatedRsvp.userId)
+        .single();
+      
+      const user = userData as { id: string; name?: string; avatar?: string } | null;
+
+      setUpcomingEvents(prev => prev.map(event => {
+        if (event.id === updatedRsvp.eventId) {
+          if (updatedRsvp.status === "CANCELLED") {
+            // Remove RSVP if cancelled
+            return { ...event, rsvps: event.rsvps.filter((r: any) => r.userId !== updatedRsvp.userId) };
+          }
+          // Update RSVP
+          const updatedRsvps = event.rsvps.map((r: any) =>
+            r.userId === updatedRsvp.userId ? { ...updatedRsvp, user } : r
+          );
+          return { ...event, rsvps: updatedRsvps };
+        }
+        return event;
+      }));
+
+      if (updatedRsvp.userId === userId) {
+        if (updatedRsvp.status === "CANCELLED") {
+          setUserRsvps(prev => {
+            const next = { ...prev };
+            delete next[updatedRsvp.eventId];
+            return next;
+          });
+        } else {
+          setUserRsvps(prev => ({ ...prev, [updatedRsvp.eventId]: updatedRsvp as unknown as EventRSVP }));
+        }
+      }
+    },
+    onDelete: (oldRsvp) => {
+      setUpcomingEvents(prev => prev.map(event => {
+        if (event.id === oldRsvp.eventId) {
+          return { ...event, rsvps: event.rsvps.filter((r: any) => r.userId !== oldRsvp.userId) };
+        }
+        return event;
+      }));
+
+      if (oldRsvp.userId === userId) {
+        setUserRsvps(prev => {
+          const next = { ...prev };
+          delete next[oldRsvp.eventId!];
+          return next;
+        });
+      }
+    },
+  });
+
+  // Realtime: Subscribe to event updates (hype meter)
+  useRealtimeTable<EventRealtime>({
+    table: "events",
+    onUpdate: (updatedEvent) => {
+      setUpcomingEvents(prev => prev.map(event => {
+        if (event.id === updatedEvent.id) {
+          return { ...event, hypeLevel: updatedEvent.hypeLevel };
+        }
+        return event;
+      }));
+    },
+  });
 
   const handleRsvp = async (eventId: string, status: "GOING" | "MAYBE" | "CANCELLED") => {
     try {

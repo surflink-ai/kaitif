@@ -24,8 +24,45 @@ import {
   Textarea,
   useToast
 } from "@kaitif/ui";
-import { Search, MoreVertical, FileText, Filter, Download, AlertTriangle } from "lucide-react";
+import { Search, MoreVertical, FileText, Filter, Download, AlertTriangle, Loader2 } from "lucide-react";
 import { createWaiverVersionAction } from "@/app/actions";
+
+const DEFAULT_WAIVER_CONTENT = `KAITIF SKATEPARK LIABILITY WAIVER AND RELEASE OF CLAIMS
+
+PLEASE READ CAREFULLY BEFORE SIGNING
+
+I, the undersigned participant (or parent/guardian of a minor participant), hereby acknowledge and agree to the following:
+
+1. ASSUMPTION OF RISK
+I understand that skateboarding, BMX riding, scootering, and related activities at Kaitif Skatepark involve inherent risks, including but not limited to:
+- Falls and collisions with other participants, equipment, or structures
+- Serious injury including broken bones, sprains, concussions, and paralysis
+- Equipment malfunction or failure
+- Varying skill levels of other participants
+
+2. RELEASE AND WAIVER OF LIABILITY
+I hereby release, waive, discharge, and covenant not to sue Kaitif Skatepark, its owners, operators, employees, agents, and representatives from any and all liability, claims, demands, actions, or causes of action arising out of or related to any loss, damage, or injury, including death, that may be sustained by me or my property while participating in activities at Kaitif Skatepark.
+
+3. INDEMNIFICATION
+I agree to indemnify and hold harmless Kaitif Skatepark from any loss, liability, damage, or costs, including court costs and attorney fees, that may incur due to my participation in activities at the facility.
+
+4. MEDICAL AUTHORIZATION
+I authorize Kaitif Skatepark staff to obtain emergency medical treatment for me (or my minor child) in the event of injury or illness. I understand that I am responsible for any medical expenses incurred.
+
+5. RULES AND REGULATIONS
+I agree to abide by all posted rules and regulations of Kaitif Skatepark, including but not limited to:
+- Wearing appropriate protective gear (helmet required at all times)
+- Respecting other participants and staff
+- Not engaging in reckless or dangerous behavior
+- Following all instructions from park staff
+
+6. PHOTO/VIDEO RELEASE
+I grant Kaitif Skatepark permission to use photographs or video footage of me (or my minor child) for promotional purposes without compensation.
+
+7. ACKNOWLEDGMENT
+I have read this waiver and release, fully understand its terms, and understand that I am giving up substantial rights by signing it. I acknowledge that I am signing this agreement freely and voluntarily, and intend by my signature to be a complete and unconditional release of all liability to the greatest extent allowed by law.
+
+This waiver is valid for one (1) year from the date of signing.`;
 
 interface WaiversClientPageProps {
   initialWaivers: any[]; // Using any for simplicity with complex relations
@@ -34,18 +71,88 @@ interface WaiversClientPageProps {
     active: number;
     expiringSoon: number;
   };
+  hasActiveVersion: boolean;
 }
 
 export default function WaiversClientPage({ 
   initialWaivers,
-  stats
+  stats,
+  hasActiveVersion
 }: WaiversClientPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [waiverContent, setWaiverContent] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [isSeeding, setIsSeeding] = useState(false);
   const { toast } = useToast();
+
+  const handleSeedWaiver = async () => {
+    setIsSeeding(true);
+    startTransition(async () => {
+      const result = await createWaiverVersionAction(DEFAULT_WAIVER_CONTENT);
+      if (result.success) {
+        toast({
+          title: "Waiver Created",
+          description: "Initial waiver version has been set up successfully.",
+          variant: "success",
+        });
+        window.location.reload();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+      setIsSeeding(false);
+    });
+  };
+
+  // Show setup prompt if no active waiver version exists
+  if (!hasActiveVersion) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Waivers</h1>
+          <p className="text-[#F5F5F0]/60">
+            Manage liability waivers and view signed documents.
+          </p>
+        </div>
+
+        <Card className="border-orange-500/50">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center py-8">
+              <div className="h-16 w-16 bg-orange-500/20 border-2 border-orange-500 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-8 w-8 text-orange-500" />
+              </div>
+              <h2 className="text-xl font-bold uppercase tracking-wider mb-2">Setup Required</h2>
+              <p className="text-[#F5F5F0]/60 mb-6 max-w-md">
+                No active waiver version found. Users cannot sign waivers until you create one.
+                Click below to set up the initial waiver with standard liability terms.
+              </p>
+              <Button onClick={handleSeedWaiver} disabled={isSeeding || isPending} size="lg">
+                {isSeeding ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Create Initial Waiver
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-[#F5F5F0]/40 mt-4">
+                You can customize the waiver text after creation.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const filteredWaivers = initialWaivers.filter((waiver) => {
     const matchesSearch = 

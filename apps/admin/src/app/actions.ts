@@ -260,3 +260,404 @@ export async function sendAnnouncementAction(content: string) {
   
   return { success: false, error: "Failed to send announcement" };
 }
+
+// ============================================
+// ROLE MANAGEMENT ACTIONS
+// ============================================
+
+export async function updateUserRoleAction(
+  targetUserId: string,
+  newRole: "USER" | "ADMIN",
+  reason?: string
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { success: false, error: "Unauthorized" };
+  
+  // Verify current user is SUPERADMIN
+  const { data: currentUserData } = await supabase
+    .from("users")
+    .select("role, name, email")
+    .eq("id", user.id)
+    .single();
+  
+  const currentUser = currentUserData as { role: string; name: string | null; email: string } | null;
+    
+  if (currentUser?.role !== "SUPERADMIN") {
+    return { success: false, error: "Only SUPERADMIN can change user roles" };
+  }
+  
+  // Get target user details
+  const { data: targetUserData } = await supabase
+    .from("users")
+    .select("role, name, email")
+    .eq("id", targetUserId)
+    .single();
+  
+  const targetUser = targetUserData as { role: string; name: string | null; email: string } | null;
+    
+  if (!targetUser) {
+    return { success: false, error: "User not found" };
+  }
+  
+  // Cannot change SUPERADMIN roles via UI
+  if (targetUser.role === "SUPERADMIN") {
+    return { success: false, error: "Cannot modify SUPERADMIN roles via UI" };
+  }
+  
+  // Cannot change own role
+  if (targetUserId === user.id) {
+    return { success: false, error: "Cannot change your own role" };
+  }
+  
+  const oldRole = targetUser.role;
+  
+  // Update the user's role
+  const { error: updateError } = await (supabase
+    .from("users") as any)
+    .update({ role: newRole })
+    .eq("id", targetUserId);
+    
+  if (updateError) {
+    console.error("Failed to update user role:", updateError);
+    return { success: false, error: "Failed to update user role" };
+  }
+  
+  // Log the role change
+  const { error: logError } = await (supabase
+    .from("role_change_logs") as any)
+    .insert({
+      userId: targetUserId,
+      oldRole,
+      newRole,
+      changedBy: user.id,
+      reason: reason || null,
+    });
+    
+  if (logError) {
+    console.error("Failed to log role change:", logError);
+    // Don't fail the action, just log the error
+  }
+  
+  // Send email notification (fire and forget)
+  try {
+    // Dynamic import to avoid issues if email package isn't installed yet
+    const { sendRoleChangeEmail } = await import("@kaitif/email");
+    await sendRoleChangeEmail(
+      targetUser.email,
+      targetUser.name || "User",
+      oldRole,
+      newRole,
+      currentUser.name || "Administrator"
+    );
+  } catch (emailError) {
+    console.error("Failed to send role change email:", emailError);
+    // Don't fail the action if email fails
+  }
+  
+  revalidatePath("/dashboard/users");
+  return { success: true };
+}
+
+export async function getRoleChangeLogsAction(userId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { success: false, error: "Unauthorized", logs: [] };
+  
+  // Only SUPERADMIN can view role change logs
+  const { data: currentUserData } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  
+  const currentUser = currentUserData as { role: string } | null;
+    
+  if (currentUser?.role !== "SUPERADMIN") {
+    return { success: false, error: "Only SUPERADMIN can view role change logs", logs: [] };
+  }
+  
+  const { data: logs, error } = await supabase
+    .from("role_change_logs")
+    .select(`
+      *,
+      changedByUser:users!role_change_logs_changedBy_fkey(name, email)
+    `)
+    .eq("userId", userId)
+    .order("createdAt", { ascending: false });
+    
+  if (error) {
+    console.error("Failed to fetch role change logs:", error);
+    return { success: false, error: "Failed to fetch logs", logs: [] };
+  }
+  
+  return { success: true, logs: logs || [] };
+}
+
+// ============================================
+// INVITE ACTIONS
+// ============================================
+
+export async function createInviteAction(
+  email: string,
+  role: "USER" | "ADMIN"
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { success: false, error: "Unauthorized" };
+  
+  // Get current user details and role
+  const { data: currentUserData } = await supabase
+    .from("users")
+    .select("role, name")
+    .eq("id", user.id)
+    .single();
+  
+  const currentUser = currentUserData as { role: string; name: string | null } | null;
+    
+  if (!currentUser) {
+    return { success: false, error: "User not found" };
+  }
+  
+  // Check permissions
+  // ADMIN can only invite USER role
+  // SUPERADMIN can invite USER or ADMIN
+  if (currentUser.role === "ADMIN" && role !== "USER") {
+    return { success: false, error: "Admins can only invite users" };
+  }
+  
+  if (currentUser.role !== "ADMIN" && currentUser.role !== "SUPERADMIN") {
+    return { success: false, error: "Only admins can send invites" };
+  }
+  
+  // Check if email already exists
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", email)
+    .single();
+    
+  if (existingUser) {
+    return { success: false, error: "A user with this email already exists" };
+  }
+  
+  // Check for existing pending invite
+  const { data: existingInvite } = await supabase
+    .from("user_invites")
+    .select("id, status")
+    .eq("email", email)
+    .eq("status", "PENDING")
+    .single();
+    
+  if (existingInvite) {
+    return { success: false, error: "A pending invite already exists for this email" };
+  }
+  
+  // Generate secure token
+  const token = crypto.randomUUID();
+  
+  // Set expiry to 7 days from now
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+  
+  // Create the invite
+  const { error: insertError } = await (supabase
+    .from("user_invites") as any)
+    .insert({
+      email,
+      role,
+      invitedBy: user.id,
+      token,
+      expiresAt: expiresAt.toISOString(),
+    });
+    
+  if (insertError) {
+    console.error("Failed to create invite:", insertError);
+    return { success: false, error: "Failed to create invite" };
+  }
+  
+  // Send invite email
+  try {
+    const { sendInviteEmail } = await import("@kaitif/email");
+    const inviteUrl = `${process.env.NEXT_PUBLIC_WEB_URL || "https://kaitif.com"}/invite/${token}`;
+    await sendInviteEmail(
+      email,
+      currentUser.name || "Kaitif Admin",
+      role,
+      inviteUrl
+    );
+  } catch (emailError) {
+    console.error("Failed to send invite email:", emailError);
+    // Don't fail - invite was created, email just didn't send
+  }
+  
+  revalidatePath("/dashboard/users");
+  return { success: true, token };
+}
+
+export async function cancelInviteAction(inviteId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { success: false, error: "Unauthorized" };
+  
+  // Verify user is admin
+  const { data: currentUserData } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  
+  const currentUser = currentUserData as { role: string } | null;
+    
+  if (currentUser?.role !== "ADMIN" && currentUser?.role !== "SUPERADMIN") {
+    return { success: false, error: "Only admins can cancel invites" };
+  }
+  
+  const { error } = await (supabase
+    .from("user_invites") as any)
+    .update({ status: "CANCELLED" })
+    .eq("id", inviteId)
+    .eq("status", "PENDING");
+    
+  if (error) {
+    console.error("Failed to cancel invite:", error);
+    return { success: false, error: "Failed to cancel invite" };
+  }
+  
+  revalidatePath("/dashboard/users");
+  return { success: true };
+}
+
+export async function resendInviteAction(inviteId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { success: false, error: "Unauthorized" };
+  
+  // Get current user
+  const { data: currentUserData } = await supabase
+    .from("users")
+    .select("role, name")
+    .eq("id", user.id)
+    .single();
+  
+  const currentUser = currentUserData as { role: string; name: string | null } | null;
+    
+  if (currentUser?.role !== "ADMIN" && currentUser?.role !== "SUPERADMIN") {
+    return { success: false, error: "Only admins can resend invites" };
+  }
+  
+  // Get invite details
+  const { data: inviteData } = await supabase
+    .from("user_invites")
+    .select("*")
+    .eq("id", inviteId)
+    .eq("status", "PENDING")
+    .single();
+  
+  const invite = inviteData as { email: string; role: string } | null;
+    
+  if (!invite) {
+    return { success: false, error: "Invite not found or already processed" };
+  }
+  
+  // Generate new token and extend expiry
+  const newToken = crypto.randomUUID();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+  
+  const { error: updateError } = await (supabase
+    .from("user_invites") as any)
+    .update({ 
+      token: newToken, 
+      expiresAt: expiresAt.toISOString() 
+    })
+    .eq("id", inviteId);
+    
+  if (updateError) {
+    console.error("Failed to update invite:", updateError);
+    return { success: false, error: "Failed to resend invite" };
+  }
+  
+  // Send new email
+  try {
+    const { sendInviteEmail } = await import("@kaitif/email");
+    const inviteUrl = `${process.env.NEXT_PUBLIC_WEB_URL || "https://kaitif.com"}/invite/${newToken}`;
+    await sendInviteEmail(
+      invite.email,
+      currentUser?.name || "Kaitif Admin",
+      invite.role as "USER" | "ADMIN",
+      inviteUrl
+    );
+  } catch (emailError) {
+    console.error("Failed to send invite email:", emailError);
+  }
+  
+  revalidatePath("/dashboard/users");
+  return { success: true };
+}
+
+export async function getPendingInvitesAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { success: false, error: "Unauthorized", invites: [] };
+  
+  // Verify user is admin
+  const { data: currentUserData } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  
+  const currentUser = currentUserData as { role: string } | null;
+    
+  if (currentUser?.role !== "ADMIN" && currentUser?.role !== "SUPERADMIN") {
+    return { success: false, error: "Only admins can view invites", invites: [] };
+  }
+  
+  const { data: invites, error } = await supabase
+    .from("user_invites")
+    .select(`
+      *,
+      inviter:users!user_invites_invitedBy_fkey(name, email)
+    `)
+    .eq("status", "PENDING")
+    .order("createdAt", { ascending: false });
+    
+  if (error) {
+    console.error("Failed to fetch invites:", error);
+    return { success: false, error: "Failed to fetch invites", invites: [] };
+  }
+  
+  return { success: true, invites: invites || [] };
+}
+
+// ============================================
+// CURRENT USER ACTIONS
+// ============================================
+
+export async function getCurrentUserRoleAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { role: null, name: null, email: null };
+  
+  const { data: profileData } = await supabase
+    .from("users")
+    .select("role, name, email")
+    .eq("id", user.id)
+    .single();
+  
+  const profile = profileData as { role: string; name: string | null; email: string } | null;
+    
+  return { 
+    role: profile?.role || null,
+    name: profile?.name || null,
+    email: profile?.email || null,
+  };
+}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
   Card, 
   CardContent, 
   CardHeader, 
-  CardTitle, 
+  CardTitle,
+  CardDescription,
   Button, 
   Input, 
   Badge, 
@@ -16,22 +17,88 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from "@kaitif/ui";
-import { Search, MoreVertical, Mail, Filter } from "lucide-react";
-import { User } from "@kaitif/db";
+import { Search, MoreVertical, Mail, Filter, UserPlus, Shield, ShieldCheck, X, RefreshCw, Loader2 } from "lucide-react";
+import { User, getRoleBadgeVariant, getRoleDisplayName, getInvitableRoles } from "@kaitif/db";
+import { 
+  updateUserRoleAction, 
+  createInviteAction, 
+  cancelInviteAction, 
+  resendInviteAction,
+  getPendingInvitesAction,
+  getCurrentUserRoleAction 
+} from "@/app/actions";
 
 interface UsersClientPageProps {
   users: User[];
   totalCount: number;
 }
 
+interface PendingInvite {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  createdAt: string;
+  inviter?: { name: string; email: string };
+}
+
 export default function UsersClientPage({ users, totalCount }: UsersClientPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [roleFilter, setRoleFilter] = useState<string | null>(searchParams.get("role") || null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  
+  // Role change dialog state
+  const [roleChangeDialogOpen, setRoleChangeDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [newRole, setNewRole] = useState<string>("");
+  const [roleChangeReason, setRoleChangeReason] = useState("");
+  
+  // Invite dialog state
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"USER" | "ADMIN">("USER");
+  const [inviteError, setInviteError] = useState("");
+  
+  // Load current user role and pending invites
+  useEffect(() => {
+    async function loadData() {
+      const { role } = await getCurrentUserRoleAction();
+      setCurrentUserRole(role);
+      
+      if (role === "ADMIN" || role === "SUPERADMIN") {
+        const { invites } = await getPendingInvitesAction();
+        setPendingInvites(invites as PendingInvite[]);
+      }
+    }
+    loadData();
+  }, []);
+
+  const isSuperAdmin = currentUserRole === "SUPERADMIN";
+  const invitableRoles = currentUserRole ? getInvitableRoles(currentUserRole) : [];
 
   // Debounce search update
   useEffect(() => {
@@ -42,10 +109,7 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
       } else {
         params.delete("search");
       }
-      
-      // Reset page on search change
       params.set("page", "1");
-      
       router.push(`?${params.toString()}`);
     }, 500);
     return () => clearTimeout(timer);
@@ -63,6 +127,75 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
     router.push(`?${params.toString()}`);
   };
 
+  const handleRoleChange = async () => {
+    if (!selectedUser || !newRole) return;
+    
+    startTransition(async () => {
+      const result = await updateUserRoleAction(
+        selectedUser.id,
+        newRole as "USER" | "ADMIN",
+        roleChangeReason || undefined
+      );
+      
+      if (result.success) {
+        setRoleChangeDialogOpen(false);
+        setSelectedUser(null);
+        setNewRole("");
+        setRoleChangeReason("");
+        router.refresh();
+      } else {
+        alert(result.error || "Failed to update role");
+      }
+    });
+  };
+
+  const handleInvite = async () => {
+    if (!inviteEmail) {
+      setInviteError("Email is required");
+      return;
+    }
+    
+    setInviteError("");
+    
+    startTransition(async () => {
+      const result = await createInviteAction(inviteEmail, inviteRole);
+      
+      if (result.success) {
+        setInviteDialogOpen(false);
+        setInviteEmail("");
+        setInviteRole("USER");
+        // Refresh invites
+        const { invites } = await getPendingInvitesAction();
+        setPendingInvites(invites as PendingInvite[]);
+      } else {
+        setInviteError(result.error || "Failed to send invite");
+      }
+    });
+  };
+
+  const handleCancelInvite = async (inviteId: string) => {
+    startTransition(async () => {
+      const result = await cancelInviteAction(inviteId);
+      if (result.success) {
+        setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+      }
+    });
+  };
+
+  const handleResendInvite = async (inviteId: string) => {
+    startTransition(async () => {
+      await resendInviteAction(inviteId);
+      const { invites } = await getPendingInvitesAction();
+      setPendingInvites(invites as PendingInvite[]);
+    });
+  };
+
+  const openRoleChangeDialog = (user: User) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setRoleChangeDialogOpen(true);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -72,12 +205,128 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
             Manage user accounts, roles, and permissions.
           </p>
         </div>
-        <Button>
-          <Mail className="h-4 w-4 mr-2" />
-          Invite User
-        </Button>
+        
+        {/* Invite User Dialog */}
+        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite New User</DialogTitle>
+              <DialogDescription>
+                Send an invitation email to add a new user to Kaitif.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "USER" | "ADMIN")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {invitableRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {getRoleDisplayName(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-[#F5F5F0]/40">
+                  {inviteRole === "ADMIN" 
+                    ? "Admin users can access the admin dashboard."
+                    : "Regular users can access the main app."}
+                </p>
+              </div>
+              {inviteError && (
+                <p className="text-sm text-red-500">{inviteError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInvite} disabled={isPending}>
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Invite"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
+      {/* Pending Invites */}
+      {pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Pending Invites ({pendingInvites.length})
+            </CardTitle>
+            <CardDescription>
+              These users have been invited but haven't accepted yet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pendingInvites.map((invite) => (
+                <div 
+                  key={invite.id}
+                  className="flex items-center justify-between p-3 rounded bg-[#F5F5F0]/5 border border-[#F5F5F0]/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-[#FFCC00]/20 flex items-center justify-center">
+                      <Mail className="h-4 w-4 text-[#FFCC00]" />
+                    </div>
+                    <div>
+                      <div className="font-medium">{invite.email}</div>
+                      <div className="text-xs text-[#F5F5F0]/40">
+                        Expires {new Date(invite.expiresAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={invite.role === "ADMIN" ? "accent" : "secondary"}>
+                      {invite.role}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleResendInvite(invite.id)}
+                      disabled={isPending}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleCancelInvite(invite.id)}
+                      disabled={isPending}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Users Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -107,11 +356,11 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
                   <DropdownMenuItem onClick={() => handleRoleFilter("USER")}>
                     Users
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRoleFilter("STAFF")}>
-                    Staff
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRoleFilter("ADMIN")}>
                     Admins
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleRoleFilter("SUPERADMIN")}>
+                    Super Admins
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -132,7 +381,11 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
               </thead>
               <tbody>
                 {users.length === 0 ? (
-                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No users found</td></tr>
+                  <tr>
+                    <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                      No users found
+                    </td>
+                  </tr>
                 ) : users.map((user) => (
                   <tr key={user.id} className="border-b border-[#F5F5F0]/10 hover:bg-[#F5F5F0]/5 transition-colors">
                     <td className="p-4 align-middle">
@@ -145,16 +398,15 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
                       </div>
                     </td>
                     <td className="p-4 align-middle">
-                      <Badge variant={
-                        user.role === "ADMIN" ? "destructive" : 
-                        user.role === "STAFF" ? "accent" : "secondary"
-                      }>
-                        {user.role}
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {user.role === "SUPERADMIN" && <ShieldCheck className="h-3 w-3 mr-1" />}
+                        {user.role === "ADMIN" && <Shield className="h-3 w-3 mr-1" />}
+                        {getRoleDisplayName(user.role)}
                       </Badge>
                     </td>
                     <td className="p-4 align-middle">
                       <div className="font-bold text-[#FFCC00]">Lvl {user.level}</div>
-                      <div className="text-xs text-[#F5F5F0]/40">{user.xp} XP</div>
+                      <div className="text-xs text-[#F5F5F0]/40">{user.xp.toLocaleString()} XP</div>
                     </td>
                     <td className="p-4 align-middle text-[#F5F5F0]/60">
                       {new Date(user.createdAt).toLocaleDateString()}
@@ -170,6 +422,15 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem>View Profile</DropdownMenuItem>
                           <DropdownMenuItem>Edit Details</DropdownMenuItem>
+                          {isSuperAdmin && user.role !== "SUPERADMIN" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openRoleChangeDialog(user)}>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Change Role
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -180,6 +441,65 @@ export default function UsersClientPage({ users, totalCount }: UsersClientPagePr
           </div>
         </CardContent>
       </Card>
+
+      {/* Role Change Dialog */}
+      <Dialog open={roleChangeDialogOpen} onOpenChange={setRoleChangeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change User Role</DialogTitle>
+            <DialogDescription>
+              Update the role for {selectedUser?.name || selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3 p-3 bg-[#F5F5F0]/5 rounded">
+              <Avatar name={selectedUser?.name || "User"} src={selectedUser?.avatarUrl} size="md" />
+              <div>
+                <div className="font-bold">{selectedUser?.name || "Unnamed User"}</div>
+                <div className="text-sm text-[#F5F5F0]/60">{selectedUser?.email}</div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Current Role</Label>
+              <Badge variant={getRoleBadgeVariant(selectedUser?.role || "USER")}>
+                {getRoleDisplayName(selectedUser?.role || "USER")}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newRole">New Role</Label>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">User</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason (optional)</Label>
+              <Input
+                id="reason"
+                placeholder="Why are you changing this role?"
+                value={roleChangeReason}
+                onChange={(e) => setRoleChangeReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleChangeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRoleChange} 
+              disabled={isPending || newRole === selectedUser?.role}
+            >
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -62,9 +62,9 @@ function AdminLoginContent() {
         
         const profile = data as { role: string } | null;
 
-        if (profile?.role !== "STAFF" && profile?.role !== "ADMIN") {
+        if (profile?.role !== "ADMIN" && profile?.role !== "SUPERADMIN") {
           await supabase.auth.signOut();
-          throw new Error("Unauthorized access. Staff only.");
+          throw new Error("Unauthorized access. Admin access only.");
         }
       }
 
@@ -81,7 +81,7 @@ function AdminLoginContent() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold tracking-wider text-[#FFCC00] mb-2">KAITIF</h1>
-          <p className="text-[#F5F5F0]/60 uppercase tracking-widest text-sm">Staff Portal</p>
+          <p className="text-[#F5F5F0]/60 uppercase tracking-widest text-sm">Admin Portal</p>
         </div>
 
         <Card className="border-[#F5F5F0]/10">
@@ -89,8 +89,8 @@ function AdminLoginContent() {
             <div className="mx-auto w-12 h-12 bg-[#FFCC00]/10 rounded-full flex items-center justify-center mb-4">
               <Lock className="w-6 h-6 text-[#FFCC00]" />
             </div>
-            <CardTitle>Staff Login</CardTitle>
-            <CardDescription>Enter your credentials to access the dashboard</CardDescription>
+            <CardTitle>Admin Login</CardTitle>
+            <CardDescription>Enter your credentials to access the admin dashboard</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -100,7 +100,7 @@ function AdminLoginContent() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="staff@kaitif.com"
+                  placeholder="admin@kaitif.com"
                   error={!!errors.email}
                   {...register("email")}
                 />

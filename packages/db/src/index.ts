@@ -20,6 +20,9 @@ export * from "./validators";
 // Constants exports
 export * from "./constants";
 
+// Permissions exports
+export * from "./permissions";
+
 // Query exports
 export * as userQueries from "./queries/users";
 export * as passQueries from "./queries/passes";
@@ -29,6 +32,8 @@ export * as challengeQueries from "./queries/challenges";
 export * as marketplaceQueries from "./queries/marketplace";
 export * as messageQueries from "./queries/messages";
 export * as analyticsQueries from "./queries/analytics";
+export * as badgeAutomation from "./queries/badge-automation";
+export * as feedQueries from "./queries/feed";
 
 // Re-export individual query functions for convenience
 export {
@@ -104,6 +109,7 @@ export {
   getUserChallengeCompletions,
   getPendingCompletions,
   getChallengeLeaderboard,
+  getXPLeaderboard,
   getAllBadges,
   getUserBadges,
   awardBadge,
@@ -156,3 +162,21 @@ export {
   getHourlyTraffic,
   getUserGrowth,
 } from "./queries/analytics";
+
+export {
+  checkAndAwardBadges,
+  checkBadgesForAction,
+  awardSpecificBadge,
+  checkEarlyAdopterBadges,
+} from "./queries/badge-automation";
+
+export {
+  getFeedPosts,
+  createFeedPost,
+  deleteFeedPost,
+  toggleLike,
+  getPostComments,
+  createComment,
+  deleteComment,
+  getActivityFeed,
+} from "./queries/feed";

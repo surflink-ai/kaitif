@@ -82,6 +82,11 @@ export { HypeMeter } from "./components/hype-meter";
 export { XPBar } from "./components/xp-bar";
 export { CountdownTimer } from "./components/countdown-timer";
 export { WeatherWidget, type WeatherCondition } from "./components/weather-widget";
+export { FeedPostCard } from "./components/feed-post-card";
+export { FeedActivityCard } from "./components/feed-activity-card";
+export { CreatePostForm } from "./components/create-post-form";
+export { CommentSection } from "./components/comment-section";
+export { LikeButton } from "./components/like-button";
 
 // Hooks
 export { useToast, toast } from "./hooks/use-toast";

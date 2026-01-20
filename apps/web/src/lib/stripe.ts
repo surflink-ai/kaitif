@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { PASS_PRICES } from "@kaitif/db";
+import { PASS_PRICES, MARKETPLACE_FEE_PERCENT } from "@kaitif/db";
 
 // Server-side Stripe client (lazy initialization to avoid build-time errors)
 let _stripe: Stripe | null = null;
@@ -73,11 +73,13 @@ export async function createPassCheckoutSession({
   return session.url!;
 }
 
-// Create a checkout session for marketplace purchase
+// Create a checkout session for marketplace purchase with Stripe Connect
 export async function createMarketplaceCheckoutSession({
   listingId,
   buyerId,
   sellerId,
+  sellerStripeAccountId,
+  transactionId,
   amount,
   title,
   customerEmail,
@@ -87,15 +89,20 @@ export async function createMarketplaceCheckoutSession({
   listingId: string;
   buyerId: string;
   sellerId: string;
+  sellerStripeAccountId: string;
+  transactionId: string;
   amount: number;
   title: string;
   customerEmail: string;
   successUrl: string;
   cancelUrl: string;
 }): Promise<string> {
-  // In production, you'd use Stripe Connect for marketplace payments
-  // This is a simplified version
-  const session = await stripe.checkout.sessions.create({
+  // Calculate platform fee (e.g., 5% of the transaction)
+  const platformFeeAmount = Math.round(amount * (MARKETPLACE_FEE_PERCENT / 100));
+
+  // Create a Checkout Session with Stripe Connect destination charges
+  // The full amount is charged to the customer, platform fee is kept, rest goes to seller
+  const session = await getStripe().checkout.sessions.create({
     mode: "payment",
     customer_email: customerEmail,
     line_items: [
@@ -104,7 +111,69 @@ export async function createMarketplaceCheckoutSession({
           currency: "usd",
           product_data: {
             name: title,
-            description: "Marketplace purchase",
+            description: "Kaitif Marketplace purchase",
+          },
+          unit_amount: amount,
+        },
+        quantity: 1,
+      },
+    ],
+    // Stripe Connect: Transfer remaining amount to seller after platform fee
+    payment_intent_data: {
+      application_fee_amount: platformFeeAmount,
+      transfer_data: {
+        destination: sellerStripeAccountId,
+      },
+    },
+    metadata: {
+      listingId,
+      buyerId,
+      sellerId,
+      transactionId,
+      type: "marketplace",
+      platformFee: platformFeeAmount.toString(),
+    },
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  });
+
+  return session.url!;
+}
+
+// Create a checkout session for marketplace purchase without Connect (fallback)
+export async function createMarketplaceCheckoutSessionSimple({
+  listingId,
+  buyerId,
+  sellerId,
+  transactionId,
+  amount,
+  title,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  transactionId: string;
+  amount: number;
+  title: string;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<string> {
+  // Fallback for sellers without Stripe Connect
+  // Platform collects payment, manual payout needed
+  const session = await getStripe().checkout.sessions.create({
+    mode: "payment",
+    customer_email: customerEmail,
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: title,
+            description: "Kaitif Marketplace purchase",
           },
           unit_amount: amount,
         },
@@ -115,7 +184,9 @@ export async function createMarketplaceCheckoutSession({
       listingId,
       buyerId,
       sellerId,
+      transactionId,
       type: "marketplace",
+      requiresManualPayout: "true",
     },
     success_url: successUrl,
     cancel_url: cancelUrl,

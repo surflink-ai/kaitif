@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithRelations } from "@kaitif/db";
 import ProfileClientPage from "./client-page";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();

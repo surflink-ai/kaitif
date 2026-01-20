@@ -17,8 +17,8 @@ datasource db {
 
 enum UserRole {
   USER
-  STAFF
   ADMIN
+  SUPERADMIN
 }
 
 model User {
@@ -54,6 +54,16 @@ model User {
   suggestionVotes      EventSuggestionVote[]
   uploadedMedia        EventMedia[]
   pushSubscriptions    PushSubscription[]
+  feedPosts            FeedPost[]
+  feedLikes            FeedLike[]
+  feedComments         FeedComment[]
+  
+  // Role & Session management
+  roleChanges          RoleChangeLog[] @relation("RoleChanges")
+  roleChangesInitiated RoleChangeLog[] @relation("RoleChangedBy")
+  sessions             UserSession[]
+  invitesSent          UserInvite[]
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -570,4 +580,165 @@ enum ReportStatus {
   PENDING
   REVIEWED
   DISMISSED
+}
+
+// ============================================
+// FEED
+// ============================================
+
+enum FeedPostType {
+  TEXT
+  MEDIA
+  CLIP       // Skate clip with optional trick tag
+}
+
+model FeedPost {
+  id        String       @id @default(uuid())
+  authorId  String
+  type      FeedPostType @default(TEXT)
+  content   String?      // Text content or caption
+  mediaUrl  String?      // Image/video URL
+  trickTag  String?      // Optional trick name for clips
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     FeedLike[]
+  comments  FeedComment[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("feed_posts")
+}
+
+model FeedLike {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("feed_likes")
+}
+
+model FeedComment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  post   FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("feed_comments")
+}
+
+// ============================================
+// ROLE & SESSION MANAGEMENT
+// ============================================
+
+model RoleChangeLog {
+  id        String   @id @default(uuid())
+  userId    String
+  oldRole   UserRole
+  newRole   UserRole
+  changedBy String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  user          User @relation("RoleChanges", fields: [userId], references: [id], onDelete: Cascade)
+  changedByUser User @relation("RoleChangedBy", fields: [changedBy], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([changedBy])
+  @@map("role_change_logs")
+}
+
+model UserSession {
+  id           String    @id @default(uuid())
+  userId       String
+  sessionToken String    @unique // Supabase session ID or custom token
+  deviceInfo   String?   // Browser, OS, device type
+  ipAddress    String?
+  location     String?   // City, Country (from IP)
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  isRevoked    Boolean   @default(false)
+  revokedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@map("user_sessions")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+model UserInvite {
+  id         String       @id @default(uuid())
+  email      String
+  role       UserRole     @default(USER)
+  invitedBy  String
+  token      String       @unique
+  status     InviteStatus @default(PENDING)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  inviter User @relation(fields: [invitedBy], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+  @@index([status])
+  @@map("user_invites")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  RSVP
+  MESSAGE
+  BADGE
+  CHALLENGE
+}
+
+enum NotificationResourceType {
+  POST
+  EVENT
+  MESSAGE
+  BADGE
+}
+
+model Notification {
+  id           String                    @id @default(uuid())
+  userId       String
+  type         NotificationType
+  title        String
+  body         String?
+  resourceId   String?
+  resourceType NotificationResourceType?
+  read         Boolean                   @default(false)
+  createdAt    DateTime                  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
 }

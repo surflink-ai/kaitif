@@ -3,6 +3,8 @@ import { getUpcomingEvents, getPastEvents, getTopSuggestions, EventRSVP } from "
 import EventsClientPage from "./client-page";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function EventsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
