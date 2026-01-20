@@ -27,7 +27,7 @@ const BottomDock = React.forwardRef<HTMLDivElement, BottomDockProps>(
         {...props}
       >
         {/* Min height 49pt matches iOS tab bar, content area for touch targets */}
-        <div className="flex h-[52px] items-stretch justify-around">
+        <div className="flex h-[52px] items-center justify-evenly px-4 py-1">
           {children}
         </div>
       </nav>
@@ -52,8 +52,8 @@ const BottomDockItem = React.forwardRef<HTMLButtonElement, BottomDockItemProps>(
         aria-current={active ? "page" : undefined}
         className={cn(
           // Full touch target - minimum 44pt per Apple HIG
-          "relative flex flex-1 flex-col items-center justify-center gap-0.5",
-          "min-h-[44px] min-w-[44px]",
+          "relative flex flex-col items-center justify-center gap-0.5",
+          "h-[44px] w-[64px]",
           // Colors and transitions
           "text-[#F5F5F0]/50 transition-all duration-150",
           // Active state

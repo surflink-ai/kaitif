@@ -166,7 +166,7 @@ export default function DashboardLayout({
       {/* Mobile Bottom Navigation */}
       <BottomDock>
         {navItems.slice(0, 5).map((item) => (
-          <Link key={item.href} href={item.href} className="flex-1">
+          <Link key={item.href} href={item.href}>
             <BottomDockItem
               icon={<item.icon className="h-5 w-5" />}
               label={item.label}
