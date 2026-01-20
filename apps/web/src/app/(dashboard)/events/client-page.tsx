@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, Button, Badge, HypeMeter, AvatarStack, Tabs, TabsList, TabsTrigger, TabsContent, CountdownTimer, Input, Textarea, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, useToast } from "@kaitif/ui";
-import { Calendar, MapPin, Users, Clock, Plus, ThumbsUp, CheckCircle, Video, Image as ImageIcon, Camera } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, Plus, ThumbsUp, CheckCircle, Video, Image as ImageIcon, Camera, Upload, Loader2 } from "lucide-react";
 import { EVENT_CATEGORIES, Event, EventSuggestion, EventRSVP, EventCategory } from "@kaitif/db";
 import { useRouter } from "next/navigation";
 import { useRealtimeTable } from "@/lib/hooks/use-realtime";
@@ -47,7 +47,9 @@ export default function EventsClientPage({
   
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const [mediaTargetEventId, setMediaTargetEventId] = useState<string | null>(null);
-  const [mediaForm, setMediaForm] = useState({ url: "", type: "image", caption: "" });
+  const [mediaForm, setMediaForm] = useState({ type: "image", caption: "" });
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -243,36 +245,67 @@ export default function EventsClientPage({
     }
   };
 
+  const handleMediaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMediaFile(file);
+      // Auto-detect type from file
+      const type = file.type.startsWith("video/") ? "video" : "image";
+      setMediaForm(prev => ({ ...prev, type }));
+    }
+  };
+
   const handleMediaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mediaTargetEventId) return;
+    if (!mediaTargetEventId || !mediaFile) return;
     
-    setIsSubmitting(true);
+    setUploading(true);
     try {
+      // 1. Upload file to Supabase storage
+      const fileExt = mediaFile.name.split('.').pop();
+      const fileName = `${userId}/${mediaTargetEventId}-${Date.now()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('event-media')
+        .upload(fileName, mediaFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('event-media')
+        .getPublicUrl(fileName);
+
+      // 2. Submit media record to API
       const res = await fetch("/api/events/media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...mediaForm, eventId: mediaTargetEventId }),
+        body: JSON.stringify({ 
+          url: publicUrl,
+          type: mediaForm.type,
+          caption: mediaForm.caption,
+          eventId: mediaTargetEventId 
+        }),
       });
 
-      if (!res.ok) throw new Error("Failed to upload media");
+      if (!res.ok) throw new Error("Failed to save media record");
 
       toast({
         title: "Media Added",
         description: "Your photo/video has been added to the event gallery.",
       });
       setIsMediaOpen(false);
-      setMediaForm({ url: "", type: "image", caption: "" });
+      setMediaForm({ type: "image", caption: "" });
+      setMediaFile(null);
       setMediaTargetEventId(null);
       router.refresh();
     } catch (error) {
+      console.error(error);
       toast({
-        title: "Error",
-        description: "Failed to add media.",
+        title: "Upload Failed",
+        description: "Could not upload media. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -385,41 +418,48 @@ export default function EventsClientPage({
                     </DialogHeader>
                     <form onSubmit={handleMediaSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="url">Media URL</Label>
-                        <Input 
-                        id="url" 
-                        type="url"
-                        placeholder="https://..."
-                        value={mediaForm.url} 
-                        onChange={e => setMediaForm({...mediaForm, url: e.target.value})}
-                        required 
-                        />
+                        <Label htmlFor="media-file">Photo or Video</Label>
+                        <div className="border-2 border-dashed border-[white]/20 rounded-lg p-8 text-center hover:border-[#FFE500]/50 transition-colors cursor-pointer relative">
+                          <input 
+                            type="file" 
+                            id="media-file" 
+                            accept="image/*,video/*"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={handleMediaFileChange}
+                            required
+                          />
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload className="h-8 w-8 text-[white]/40" />
+                            <p className="text-sm font-medium">
+                              {mediaFile ? mediaFile.name : "Click to upload photo or video"}
+                            </p>
+                            <p className="text-xs text-[white]/40">JPEG, PNG, MP4, MOV up to 50MB</p>
+                          </div>
+                        </div>
+                        {mediaFile && (
+                          <p className="text-xs text-[#FFE500]">
+                            Detected type: {mediaForm.type === "video" ? "Video" : "Image"}
+                          </p>
+                        )}
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="type">Type</Label>
-                        <Select 
-                        value={mediaForm.type} 
-                        onValueChange={v => setMediaForm({...mediaForm, type: v})}
-                        >
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="image">Image</SelectItem>
-                            <SelectItem value="video">Video</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="caption">Caption</Label>
+                        <Label htmlFor="caption">Caption (optional)</Label>
                         <Input 
                         id="caption"
+                        placeholder="Describe this moment..."
                         value={mediaForm.caption}
                         onChange={e => setMediaForm({...mediaForm, caption: e.target.value})}
                         />
                     </div>
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                        {isSubmitting ? "Submitting..." : "Add Media"}
+                    <Button type="submit" className="w-full" disabled={uploading || !mediaFile}>
+                        {uploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          "Add Media"
+                        )}
                     </Button>
                     </form>
                 </DialogContent>
@@ -534,7 +574,7 @@ export default function EventsClientPage({
 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <AvatarStack users={event.rsvps?.map((r: any) => r.user) || []} max={4} size="sm" />
+                            <AvatarStack users={event.rsvps?.map((r: any) => r.user).filter(Boolean) || []} max={4} size="sm" />
                             <span className="text-sm text-[white]/40">
                               {rsvpCount} attending
                             </span>

@@ -12,8 +12,10 @@ interface AvatarStackProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
   ({ className, users, max = 4, size = "sm", ...props }, ref) => {
-    const visibleUsers = users.slice(0, max);
-    const remainingCount = users.length - max;
+    // Filter out null/undefined users to prevent errors
+    const validUsers = users.filter((u): u is { name?: string | null; avatarUrl?: string | null } => u != null);
+    const visibleUsers = validUsers.slice(0, max);
+    const remainingCount = validUsers.length - max;
 
     const sizes = {
       sm: "h-8 w-8 text-xs -ml-3 first:ml-0",
